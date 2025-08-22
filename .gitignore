@@ -1,0 +1,8 @@
+.pio/
+.vscode/
+releases/
+*.elf
+*.bin
+*.hex
+*.map
+builds/
