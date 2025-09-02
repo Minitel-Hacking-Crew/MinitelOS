@@ -496,8 +496,11 @@ Cette structure modulaire permet de créer des applications robustes et maintena
 
 ## 👥 Contributeurs
 
+- LL7Baucarre
+- 0b3ud
 
 ## 📄 Licence
 
+GPL-3.0
 
 ---
