@@ -52,6 +52,7 @@ ShellCommand commands[] = {
     {"clear", shell_clear_wrapper},
     {"reboot", shell_reboot_wrapper},
     {"logout", shell_logout_wrapper},
+    {"exit",   shell_logout_wrapper},
     {"version", shell_version_wrapper},
     {"ping", shell_ping},
     {"wifi", shell_wifi_wrapper},
@@ -83,6 +84,17 @@ ShellCommand commands[] = {
     {"deluser", shell_deluser},
     {"cronpause", shell_cronpause},
     {"cronresume", shell_cronresume},
+    {"touch",    shell_touch},
+    {"env",      shell_env},
+    {"export",   shell_export},
+    {"date",     shell_date},
+    {"uptime",   shell_uptime},
+    {"free",     shell_free_cmd},
+    {"ps",       shell_ps},
+    {"kill",     shell_kill_cmd},
+    {"crontab",  shell_crontab_cmd},
+    {"chmod",    shell_chmod},
+    {"chown",    shell_chown},
 };
 
 int numCommands = sizeof(commands) / sizeof(commands[0]);

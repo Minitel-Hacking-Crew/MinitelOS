@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "applications/firstboot.h"
 
 Minitel minitel(Serial2);
 
@@ -90,18 +91,19 @@ void setup()
 
   if (guideCount >= 6)
   {
-    File f = LittleFS.open("/root/.users", "w");
-    if (f)
-    {
-      // username:hashedPassword:accessLevel 
-      f.println("root:63a9f0ea7bb98050796b649e85481845:root"); //root:root
-      f.close();
-    }
-    else
-    {
-      minitel.println("Erreur creation /root/.users");
-    }
+    // Reset : supprime la base utilisateurs => force le wizard au prochain boot
+    LittleFS.remove("/root/.users");
+    minitel.println("Base utilisateurs supprimee.");
+    minitel.println("Redemarrage...");
+    delay(1500);
+    ESP.restart();
   }
+
+  if (is_first_boot())
+  {
+    run_first_boot_setup();
+  }
+
   preferences.begin("MHC-OS", false);
   String savedSSID = preferences.getString("ssid");
   String savedPass = preferences.getString("pass");

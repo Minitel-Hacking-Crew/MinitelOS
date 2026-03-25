@@ -26,6 +26,7 @@
 #include <applications/shell_apps/shell_sys.h>
 #include <applications/shell_apps/shell_grep.h>
 #include <applications/shell_apps/shell_script.h>
+#include <applications/shell_apps/shell_extra.h>
 #include <applications/cron/cron.h>
 #include <applications/ssh/sshClient.h>
 

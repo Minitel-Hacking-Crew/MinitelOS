@@ -1,0 +1,170 @@
+sum=10+3 attendu 13 obtenu 13
+diff=10-3 attendu 7 obtenu 7
+prod=10*3 attendu 30 obtenu 30
+quot=10/3 attendu 3 obtenu 3
+rem=10 mod 3 attendu 1 obtenu 1
+cnt=0+5 attendu 5 obtenu 5
+cnt=5*2 attendu 10 obtenu 10
+cnt=10-3 attendu 7 obtenu 7
+area=3.14*2.0 attendu 6.28 obtenu 6.28
+half=6.28/2 attendu 3.14 obtenu 3.14
+eq OK
+ne OK
+gt OK
+lt OK
+ge OK
+le OK
+ge else OK
+seq OK
+sne OK
+seq else OK
+total=1+2+3+4+5 attendu 15 obtenu 15
+acc=3+4+5+6 attendu 18 obtenu 18
+ww attendu 7 obtenu 7
+bien
+autoint attendu 42 obtenu 42
+autofloat attendu 1.5 obtenu 1.50
+autostr attendu bonjour monde obtenu bonjou2.00 monde
+ligne1
+ligne2
+avant exit
+sum=10+3 attendu 13 obtenu 13
+diff=10-3 attendu 7 obtenu 7
+prod=10*3 attendu 30 obtenu 30
+quot=10/3 attendu 3 obtenu 3
+rem=10 mod 3 attendu 1 obtenu 1
+cnt=0+5 attendu 5 obtenu 5
+cnt=5*2 attendu 10 obtenu 10
+cnt=10-3 attendu 7 obtenu 7
+area=3.14*2.0 attendu 6.28 obtenu 6.28
+half=6.28/2 attendu 3.14 obtenu 3.14
+eq OK
+ne OK
+gt OK
+lt OK
+ge OK
+le OK
+ge else OK
+seq OK
+sne OK
+seq else OK
+total=1+2+3+4+5 attendu 15 obtenu 15
+acc=3+4+5+6 attendu 18 obtenu 18
+ww attendu 7 obtenu 7
+bien
+autoint attendu 42 obtenu 42
+autofloat attendu 1.5 obtenu 1.50
+autostr attendu bonjour monde obtenu bonjour monde
+ligne1
+ligne2
+avant exit
+sum=10+3 attendu 13 obtenu 13
+diff=10-3 attendu 7 obtenu 7
+prod=10*3 attendu 30 obtenu 30
+quot=10/3 attendu 3 obtenu 3
+rem=10 mod 3 attendu 1 obtenu 1
+cnt=0+5 attendu 5 obtenu 5
+cnt=5*2 attendu 10 obtenu 10
+cnt=10-3 attendu 7 obtenu 7
+area=3.14*2.0 attendu 6.28 obtenu 6.28
+half=6.28/2 attendu 3.14 obtenu 3.14
+eq OK
+ne OK
+gt OK
+lt OK
+ge OK
+le OK
+ge else OK
+seq OK
+sne OK
+seq else OK
+total=1+2+3+4+5 attendu 15 obtenu 15
+acc=3+4+5+6 attendu 18 obtenu 18
+ww attendu 7 obtenu 7
+bien
+autoint attendu 42 obtenu 42
+autofloat attendu 1.5 obtenu 1.50
+autostr attendu bonjour monde obtenu bonjour monde
+ligne1
+ligne2
+avant exit
+sum=10+3 attendu 13 obtenu 13
+diff=10-3 attendu 7 obtenu 7
+prod=10*3 attendu 30 obtenu 30
+quot=10/3 attendu 3 obtenu 3
+rem=10 mod 3 attendu 1 obtenu 1
+cnt=0+5 attendu 5 obtenu 5
+cnt=5*2 attendu 10 obtenu 10
+cnt=10-3 attendu 7 obtenu 7
+area=3.14*2.0 attendu 6.28 obtenu 6.28
+half=6.28/2 attendu 3.14 obtenu 3.14
+eq OK
+ne OK
+gt OK
+lt OK
+ge OK
+le OK
+ge else OK
+seq OK
+sne OK
+seq else OK
+total=1+2+3+4+5 attendu 15 obtenu 15
+acc=3+4+5+6 attendu 18 obtenu 18
+ww attendu 7 obtenu 7
+bien
+autoint attendu 42 obtenu 42
+autofloat attendu 1.5 obtenu 1.50
+autostr attendu bonjour monde obtenu bonjour monde
+ligne1
+ligne2
+avant exit
+sum=10+3 attendu 13 obtenu 13
+diff=10-3 attendu 7 obtenu 7
+prod=10*3 attendu 30 obtenu 30
+quot=10/3 attendu 3 obtenu 3
+rem=10 mod 3 attendu 1 obtenu 1
+cnt=0+5 attendu 5 obtenu 5
+cnt=5*2 attendu 10 obtenu 10
+cnt=10-3 attendu 7 obtenu 7
+area=3.14*2.0 attendu 6.28 obtenu 6.28
+half=6.28/2 attendu 3.14 obtenu 3.14
+eq OK
+ne OK
+gt OK
+lt OK
+ge OK
+le OK
+ge else OK
+seq OK
+sne OK
+seq else OK
+total=1+2+3+4+5 attendu 15 obtenu 15
+acc=3+4+5+6 attendu 18 obtenu 18
+ww attendu 7 obtenu 7
+bien
+autoint attendu 42 obtenu 42
+autofloat attendu 1.5 obtenu 1.50
+autostr attendu bonjour monde obtenu bonjour monde
+ligne1
+ligne2
+avant exit
+--- Variables ---
+compteur=0 temp=20.50
+message=Bonjour MinitelOS actif=true
+--- Arithmetique ---
+somme=14 produit=40 reste=2
+--- Boucle for ---
+total 1..5 = 15
+--- Conditions ---
+bien (score 75)
+--- While et break ---
+cnt apres break = 64
+--- Comparaisons string ---
+langue francaise detectee
+pas anglais
+--- Redirection ---
+rapport MinitelOS
+date:
+--- ne / ge / le ---
+valeur non nulle
+valeur <= 10

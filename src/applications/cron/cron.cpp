@@ -16,12 +16,14 @@ TaskHandle_t cronTaskHandle = NULL;
 void load_crontab()
 {
     cronTasks.clear();
-    File f = LittleFS.open("/root/.crontab", "r");
-    if (!f)
+    if (!LittleFS.exists("/root/.crontab"))
     {
-        minitel.println("Erreur d'ouverture du fichier de crontab.");
+        File c = LittleFS.open("/root/.crontab", "w");
+        if (c) c.close();
         return;
     }
+    File f = LittleFS.open("/root/.crontab", "r");
+    if (!f) return;
     int taskCount = 0;
     while (f.available())
     {

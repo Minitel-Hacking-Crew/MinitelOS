@@ -1,0 +1,81 @@
+# demo.msh — Demonstration de l'interpreteur MinitelOS .msh
+echo ====== Demo MinitelOS Script ======
+
+# 1. Variables typees
+echo --- Variables ---
+int compteur = 0
+float temperature = 20.5
+string message = "Bonjour MinitelOS"
+bool actif = true
+echo compteur=$compteur temp=$temperature
+echo message=$message actif=$actif
+
+# 2. Arithmetique : left op right correct
+echo --- Arithmetique ---
+int aa = 10
+int bb = 4
+int somme = $aa+$bb
+int produit = $aa*$bb
+int reste = $aa%$bb
+echo somme=$somme produit=$produit reste=$reste
+
+# 3. Accumulation dans une boucle for
+echo --- Boucle for ---
+int total = 0
+for ii 1 5
+total=$total+$ii
+endfor
+echo total 1..5 = $total
+
+# 4. Conditions etendues
+echo --- Conditions ---
+int score = 75
+if score ge 90
+echo excellent
+else
+if score ge 60
+echo bien (score $score)
+else
+echo insuffisant
+endif
+endif
+
+# 5. Boucle while avec break
+echo --- While et break ---
+int cnt = 1
+while cnt lt 100
+cnt=$cnt*2
+if cnt gt 50
+break
+endif
+endwhile
+echo cnt apres break = $cnt
+
+# 6. Comparaison de chaines
+echo --- Comparaisons string ---
+string langue = "fr"
+if $langue seq fr
+echo langue francaise detectee
+endif
+if $langue sne en
+echo pas anglais
+endif
+
+# 7. Redirection vers fichier
+echo --- Redirection ---
+echo rapport MinitelOS > /root/rapport.txt
+echo date: >> /root/rapport.txt
+date >> /root/rapport.txt
+cat /root/rapport.txt
+
+# 8. Condition ne (not equal)
+echo --- ne / ge / le ---
+int valeur = 7
+if valeur ne 0
+echo valeur non nulle
+endif
+if valeur le 10
+echo valeur <= 10
+endif
+
+echo ====== Fin demo ======
