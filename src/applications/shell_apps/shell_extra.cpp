@@ -345,14 +345,16 @@ void shell_sudo(const String &args) {
         hash += String(digest[i], HEX);
     }
     if (hash != rootHash) { shell_println_wrapped("Mot de passe incorrect."); return; }
-    // Elevation temporaire root
+    // Élévation temporaire : accessLevel seulement (username inchangé)
+    // Si la commande change la session (ex: su), on ne restaure pas.
     String savedLevel = sessionAccessLevel;
     String savedUser  = sessionUsername;
     sessionAccessLevel = "root";
-    sessionUsername    = "root";
     shell_eval_line(args);
-    sessionAccessLevel = savedLevel;
-    sessionUsername    = savedUser;
+    // Restaure uniquement si la session n'a pas été changée par la commande
+    if (sessionUsername == savedUser) {
+        sessionAccessLevel = savedLevel;
+    }
 }
 
 // ─── chown ───────────────────────────────────────────────────────────────────

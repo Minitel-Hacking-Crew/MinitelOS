@@ -513,6 +513,20 @@ void shell_su(const String &args)
         return;
     }
 
+    // Root peut changer d'utilisateur sans mot de passe (comme sur Linux)
+    if (sessionAccessLevel == "root") {
+        sessionUsername    = targetUser;
+        sessionPassword    = foundHash;
+        sessionAccessLevel = foundLevel;
+        minitel.println();
+        shell_println_wrapped("Changement d'utilisateur : " + targetUser);
+        if (targetUser == "root")
+            shell_current_dir = "/root";
+        else
+            shell_current_dir = "/home/" + targetUser;
+        return;
+    }
+
     // Demande le mot de passe
     minitel.println();
     String inputPass = saisirTexte("Mot de passe pour " + targetUser + " :", true, 20, "");
