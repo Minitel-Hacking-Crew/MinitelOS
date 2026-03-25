@@ -455,20 +455,21 @@ unsigned long Minitel::getKeyCode(bool unicode) {
     if (c == 0x1B) {
         // Read rest of escape sequence with short timeout
         if (!isatty(STDIN_FILENO)) return (unsigned long)SOMMAIRE;
+        // TCSANOW : ne vide PAS le buffer — les bytes [A/B/C/D sont déjà arrivés
         struct termios t = _orig_termios;
         t.c_lflag &= ~(ICANON | ECHO);
         t.c_cc[VMIN] = 0; t.c_cc[VTIME] = 1; // 100ms timeout
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &t);
+        tcsetattr(STDIN_FILENO, TCSANOW, &t);
 
         unsigned char seq[6] = {0};
         int sn = (int)read(STDIN_FILENO, seq, sizeof(seq));
 
-        // Restore raw mode
+        // Restore raw mode (TCSANOW pour ne pas perdre les prochaines touches)
         struct termios raw = _orig_termios;
         raw.c_lflag &= ~(ICANON | ECHO | ISIG);
         raw.c_iflag &= ~(IXON | ICRNL);
         raw.c_cc[VMIN] = 0; raw.c_cc[VTIME] = 0;
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+        tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 
         if (sn == 0) return (unsigned long)SOMMAIRE; // bare ESC
 
