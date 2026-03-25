@@ -445,6 +445,30 @@ void shell_motd(const String &args)
         }
         f.close();
     }
+    // Affichage du motd personnalise — les commandes shell sont executees
+    // pour permettre l'affichage dynamique (date, uptime, echo...)
+    String personal = "/home/" + sessionUsername + "/motd_perso.txt";
+    if (LittleFS.exists(personal))
+    {
+        shell_println_wrapped("--- Message personnel ---");
+        String savedUser  = sessionUsername;
+        String savedLevel = sessionAccessLevel;
+        sessionUsername    = "root";
+        sessionAccessLevel = "root";
+        File pf = LittleFS.open(personal, "r");
+        if (pf)
+        {
+            while (pf.available())
+            {
+                String line = pf.readStringUntil('\n');
+                line.trim();
+                if (line.length() > 0) shell_eval_line(line);
+            }
+            pf.close();
+        }
+        sessionUsername    = savedUser;
+        sessionAccessLevel = savedLevel;
+    }
 }
 
 void shell_motd()

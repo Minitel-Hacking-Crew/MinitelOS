@@ -1,0 +1,8 @@
+Memo perso - CONFIDENTIEL
+
+Mots de passe systeme (a changer ASAP) :
+  root : T3lm1n1
+  admin : minitel
+  backup FTP : backup42
+
+Contact urgence : 06 XX XX XX XX
