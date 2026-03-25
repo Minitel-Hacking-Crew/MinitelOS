@@ -283,35 +283,29 @@ void connecterWiFi(const String &ssid)
     minitel.println();
     minitel.println("Connexion en cours...");
 
+    WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     WiFi.begin(ssid.c_str(), pass.c_str());
 
-    unsigned long startTime = millis();
-    int retryCount = 0;
     bool connected = false;
-
-    while (!connected && retryCount < MAX_RETRIES)
+    for (int attempt = 0; attempt < MAX_RETRIES && !connected; ++attempt)
     {
-        while (millis() - startTime < CONNECTION_TIMEOUT)
+        if (attempt > 0)
+        {
+            minitel.println();
+            minitel.println("Tentative " + String(attempt + 1) + "/" + String(MAX_RETRIES));
+            WiFi.disconnect();
+            WiFi.begin(ssid.c_str(), pass.c_str());
+        }
+        unsigned long startTime = millis();
+        while (millis() - startTime < (unsigned long)CONNECTION_TIMEOUT)
         {
             if (WiFi.status() == WL_CONNECTED)
             {
                 connected = true;
                 break;
             }
-        }
-
-        if (!connected)
-        {
-            retryCount++;
-            if (retryCount < MAX_RETRIES)
-            {
-                minitel.println();
-                minitel.println("Tentative " + String(retryCount + 1) + "/" + String(MAX_RETRIES));
-                WiFi.disconnect();
-                WiFi.begin(ssid.c_str(), pass.c_str());
-                startTime = millis();
-            }
+            delay(200);
         }
     }
 

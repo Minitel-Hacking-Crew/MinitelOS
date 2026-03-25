@@ -3,6 +3,8 @@
 // =========================
 #include "globals.h"
 #include "shell.h"
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 #define HISTORY_SIZE 24
 std::deque<String> shell_history;
@@ -246,6 +248,8 @@ void shell_curl(const String &args)
         }
     }
 
+    WiFiClientSecure client;
+    HTTPClient http;
     client.setInsecure();
     shell_println_wrapped(String(isPost ? "POST " : "GET "));
     shell_println_wrapped(url);

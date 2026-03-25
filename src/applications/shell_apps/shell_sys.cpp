@@ -105,6 +105,14 @@ void shell_logout()
     delay(500);
     sessionIsLoggedIn = false;
     sessionAccessLevel = "user";
+    sessionUsername = "";
+    sessionPassword = "";
+    shell_current_dir = "/";
+    shell_vars.clear();
+    shell_int_vars.clear();
+    shell_float_vars.clear();
+    shell_string_vars.clear();
+    shell_bool_vars.clear();
     shell();
 }
 
@@ -116,11 +124,7 @@ void shell_reboot()
 
 void shell_clear()
 {
-    for (int i = 0; i < 24; ++i)
-    {
-        minitel.println(String(' ', 80));
-    }
-    minitel.moveCursorXY(0, 0);
+    minitel.newScreen();
 }
 
 void shell_df(const String &)
@@ -267,7 +271,7 @@ void shell_set(const String &args)
 
 void shell_version()
 {
-    shell_println_wrapped("MinitelOS" + OSVersion);
+    shell_println_wrapped(String("MinitelOS ") + OSVersion);
 }
 
 void shell_wait(const String &args)
@@ -330,10 +334,6 @@ void shell_help(const String &)
     shell_println_wrapped("  curl <url>       - Effectue une requête HTTP GET ou POST");
     shell_println_wrapped("  curl -d 'data' <url> - Effectue une requête HTTP POST avec des données");
     shell_println_wrapped("  ssh <user@host>  - Lance un client SSH sur le port par défaut (22)");
-
-    shell_println_wrapped("\n--- CTF CHALLENGES ---");
-    shell_println_wrapped("  ctf              - Menu des challenges");
-    shell_println_wrapped("  ctf <challenge>  - Lance un challenge spécifique");
 
     shell_println_wrapped("\n--- DIVERS ---");
     shell_println_wrapped("  help             - Affiche cette aide");

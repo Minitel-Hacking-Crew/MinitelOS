@@ -109,14 +109,6 @@ curl <url>              # Requête HTTP
 ifconfig               # Configuration réseau
 ```
 
-#### Applications
-```bash
-rogue             # Lance le jeu Roguelike
-ctf               # Menu des défis CTF
-ctf static        # Challenge buffer overflow
-ctf aslr          # Challenge ASLR
-ctf blind         # Challenge exploitation aveugle
-```
 
 #### Tâches automatisées
 ```bash
@@ -147,9 +139,7 @@ src/
 ├── globals.h/cpp         # Variables et includes globaux
 ├── applications/
 │   ├── shell.h/cpp       # Shell principal
-│   ├── bufferchall/      # Défis CTF
 │   ├── cron/            # Gestionnaire de tâches
-│   ├── roguelike/       # Jeu d'aventure
 │   ├── shell_apps/      # Applications shell
 │   └── ssh/             # Client SSH
 └── utils/               # Utilitaires

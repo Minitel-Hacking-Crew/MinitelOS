@@ -17,5 +17,4 @@ String saisirTexte(const String &invite,bool masque = false,size_t maxLen = 64, 
 String getSignalStrength(int rssi);
 void connecterWiFi();
 void connecterWiFi(const String &ssid);
-void rebootToSSH(Minitel &minitel);
 #endif // UTILS_H

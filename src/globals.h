@@ -14,8 +14,6 @@
 #include <Minitel1B_Hard.h>
 #include <Preferences.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <HTTPClient.h>
 #include <ESP32Ping.h>
 #include <FS.h>
 #include <LittleFS.h>
@@ -37,9 +35,7 @@
 //System
 extern Minitel minitel;
 extern Preferences preferences;
-extern WiFiClientSecure client;
-extern HTTPClient http;
-extern String OSVersion;
+extern const char* OSVersion;
 
 // Session
 extern String sessionUsername;
@@ -50,13 +46,6 @@ extern String sessionAccessLevel;
 
 // SSH
 extern SSHClient sshClient;
-extern String sshUser;
-extern String sshHost;
-extern String sshPassword;
-
-// WiFi
-extern String wifiSSID;
-extern String wifiPassword;
 
 //CRON
 extern bool cron_paused;
