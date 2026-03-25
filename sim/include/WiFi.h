@@ -45,7 +45,7 @@ static IPAddress _get_local_ip() {
         if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET) continue;
         if (strcmp(ifa->ifa_name, "lo0") == 0) continue;
         auto *sin = reinterpret_cast<struct sockaddr_in *>(ifa->ifa_addr);
-        uint32_t addr = ntohl(sin->sin_addr.s_addr);
+        uint32_t addr = sin->sin_addr.s_addr;  // déjà en bon ordre pour IPAddress::toString()
         freeifaddrs(ifaddr);
         return IPAddress(addr);
     }
@@ -76,6 +76,17 @@ public:
     IPAddress dnsIP()       const { return IPAddress(0x08080808); }
     String macAddress()     const { return String("DE:AD:BE:EF:00:01"); }
     int RSSI()              const { return _connected ? -48 : 0; }
+
+    // DNS resolution via POSIX getaddrinfo
+    int hostByName(const char* host, IPAddress &result) {
+        struct addrinfo hints = {}, *res;
+        hints.ai_family = AF_INET;
+        if (getaddrinfo(host, nullptr, &hints, &res) != 0) return 0;
+        uint32_t addr = ((struct sockaddr_in*)res->ai_addr)->sin_addr.s_addr;
+        result = IPAddress(addr);
+        freeaddrinfo(res);
+        return 1;
+    }
 
     // Scan : retourne les faux APs
     int scanNetworks()      { return _fake_ap_count; }

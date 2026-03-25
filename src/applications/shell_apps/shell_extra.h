@@ -14,5 +14,9 @@ void shell_kill_cmd(const String &args);
 void shell_crontab_cmd(const String &args);
 void shell_chmod(const String &args);
 void shell_chown(const String &args);
+void shell_du(const String &args);
+void shell_nslookup(const String &args);
+void shell_sleep(const String &args);
+void shell_sudo(const String &args);
 
 #endif // SHELL_EXTRA_H

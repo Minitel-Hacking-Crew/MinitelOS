@@ -2,9 +2,12 @@
 #include "applications/shell_apps/shell_edit.h"
 #include "applications/cron/cron.h"
 #include <ctime>
+#include <mbedtls/md5.h>
 
 extern void shell_println_wrapped(const String &text);
 extern String shell_abspath(const String &path);
+extern String shell_current_dir;
+extern void shell_eval_line(const String &line);
 extern std::map<String, String> shell_vars;
 extern std::map<String, int> shell_int_vars;
 extern std::map<String, float> shell_float_vars;
@@ -252,6 +255,104 @@ void shell_chmod(const String &args) {
     FileMeta m = read_meta(path);
     write_meta(path, perms, m.owner, m.group);
     shell_println_wrapped(path + " -> " + perms);
+}
+
+// ─── du ──────────────────────────────────────────────────────────────────────
+static size_t du_recursive(const String &path) {
+    File f = LittleFS.open(path);
+    if (!f) return 0;
+    if (!f.isDirectory()) {
+        size_t sz = f.size();
+        f.close();
+        return sz;
+    }
+    size_t total = 0;
+    File child = f.openNextFile();
+    while (child) {
+        total += du_recursive(String(child.name()));
+        child.close();
+        child = f.openNextFile();
+    }
+    f.close();
+    return total;
+}
+
+void shell_du(const String &args) {
+    String path = args.isEmpty() ? shell_current_dir : shell_abspath(args);
+    if (!LittleFS.exists(path)) {
+        shell_println_wrapped("Introuvable : " + path); return;
+    }
+    size_t sz = du_recursive(path);
+    char buf[48];
+    if (sz < 1024)
+        snprintf(buf, sizeof(buf), "%u o\t%s", (unsigned)sz, path.c_str());
+    else
+        snprintf(buf, sizeof(buf), "%u Ko\t%s", (unsigned)(sz / 1024), path.c_str());
+    shell_println_wrapped(String(buf));
+}
+
+// ─── nslookup ────────────────────────────────────────────────────────────────
+void shell_nslookup(const String &args) {
+    if (args.isEmpty()) { shell_println_wrapped("Usage: nslookup <host>"); return; }
+    if (WiFi.status() != WL_CONNECTED) {
+        shell_println_wrapped("Erreur : pas de connexion WiFi"); return;
+    }
+    String host = args; host.trim();
+    shell_println_wrapped("Resolution de " + host + " ...");
+    IPAddress ip;
+    if (WiFi.hostByName(host.c_str(), ip)) {
+        shell_println_wrapped(host + " -> " + ip.toString());
+    } else {
+        shell_println_wrapped("Echec : hote introuvable.");
+    }
+}
+
+// ─── sleep ───────────────────────────────────────────────────────────────────
+void shell_sleep(const String &args) {
+    if (args.isEmpty()) { shell_println_wrapped("Usage: sleep <secondes>"); return; }
+    float secs = args.toFloat();
+    if (secs > 0) delay((unsigned long)(secs * 1000.0f));
+}
+
+// ─── sudo ────────────────────────────────────────────────────────────────────
+void shell_sudo(const String &args) {
+    if (args.isEmpty()) { shell_println_wrapped("Usage: sudo <commande>"); return; }
+    // Deja root : execution directe
+    if (sessionAccessLevel == "root") {
+        shell_eval_line(args); return;
+    }
+    // Demande le mot de passe root
+    String pass = saisirTexte("Mot de passe root : ", true, 64, "");
+    minitel.println();
+    // Lecture du hash root dans .users
+    File uf = LittleFS.open("/root/.users", "r");
+    if (!uf) { shell_println_wrapped("Erreur : fichier utilisateurs introuvable."); return; }
+    String rootHash = "";
+    while (uf.available()) {
+        String line = uf.readStringUntil('\n'); line.trim();
+        int c1 = line.indexOf(':'), c2 = line.lastIndexOf(':');
+        if (c1 > 0 && c2 > c1 && line.substring(0, c1) == "root") {
+            rootHash = line.substring(c1 + 1, c2); break;
+        }
+    }
+    uf.close();
+    // Hash MD5 du mot de passe saisi
+    unsigned char digest[16];
+    mbedtls_md5((const unsigned char*)pass.c_str(), pass.length(), digest);
+    String hash = "";
+    for (int i = 0; i < 16; i++) {
+        if (digest[i] < 16) hash += "0";
+        hash += String(digest[i], HEX);
+    }
+    if (hash != rootHash) { shell_println_wrapped("Mot de passe incorrect."); return; }
+    // Elevation temporaire root
+    String savedLevel = sessionAccessLevel;
+    String savedUser  = sessionUsername;
+    sessionAccessLevel = "root";
+    sessionUsername    = "root";
+    shell_eval_line(args);
+    sessionAccessLevel = savedLevel;
+    sessionUsername    = savedUser;
 }
 
 // ─── chown ───────────────────────────────────────────────────────────────────

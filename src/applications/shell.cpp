@@ -95,6 +95,10 @@ ShellCommand commands[] = {
     {"crontab",  shell_crontab_cmd},
     {"chmod",    shell_chmod},
     {"chown",    shell_chown},
+    {"du",       shell_du},
+    {"nslookup", shell_nslookup},
+    {"sleep",    shell_sleep},
+    {"sudo",     shell_sudo},
 };
 
 int numCommands = sizeof(commands) / sizeof(commands[0]);
@@ -292,18 +296,20 @@ void shell_curl(const String &args)
 
 void shell_ifconfig(const String &args)
 {
-    minitel.println("");
+    shell_println_wrapped("wlan0 :");
     if (WiFi.status() == WL_CONNECTED)
     {
-        shell_println_wrapped("SSID     : " + WiFi.SSID());
-        shell_println_wrapped("IP       : " + WiFi.localIP().toString());
-        shell_println_wrapped("Gateway  : " + WiFi.gatewayIP().toString());
-        shell_println_wrapped("DNS      : " + WiFi.dnsIP().toString());
-        shell_println_wrapped("MAC      : " + WiFi.macAddress());
+        shell_println_wrapped("  SSID    : " + WiFi.SSID());
+        shell_println_wrapped("  IP      : " + WiFi.localIP().toString());
+        shell_println_wrapped("  Masque  : " + WiFi.subnetMask().toString());
+        shell_println_wrapped("  Gateway : " + WiFi.gatewayIP().toString());
+        shell_println_wrapped("  DNS     : " + WiFi.dnsIP().toString());
+        shell_println_wrapped("  MAC     : " + WiFi.macAddress());
+        shell_println_wrapped("  RSSI    : " + String(WiFi.RSSI()) + " dBm");
     }
     else
     {
-        shell_println_wrapped("Non connecte au WiFi.");
+        shell_println_wrapped("  Non connecte au WiFi.");
     }
 }
 

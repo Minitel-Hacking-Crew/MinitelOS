@@ -1,7 +1,7 @@
 #pragma once
 #include "FS.h"
 #include <sys/stat.h>
-#include <sys/statvfs.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <string>
 
@@ -91,19 +91,30 @@ public:
         return File(impl);
     }
 
-    size_t totalBytes() const {
-        struct statvfs sv;
-        if (statvfs(_root.c_str(), &sv) == 0)
-            return (size_t)sv.f_blocks * sv.f_frsize;
-        return 1024 * 1024;
-    }
+    // Simule la partition LittleFS ESP32 (1 Mo fixe)
+    size_t totalBytes() const { return 1024 * 1024; }
 
-    size_t usedBytes() const {
-        struct statvfs sv;
-        if (statvfs(_root.c_str(), &sv) == 0)
-            return (size_t)(sv.f_blocks - sv.f_bavail) * sv.f_frsize;
-        return 0;
+    size_t usedBytes() const { return _dir_size(_root); }
+
+private:
+    static size_t _dir_size(const std::string &path) {
+        DIR *d = opendir(path.c_str());
+        if (!d) return 0;
+        size_t total = 0;
+        struct dirent *e;
+        while ((e = readdir(d)) != nullptr) {
+            if (e->d_name[0] == '.') continue;
+            std::string child = path + "/" + e->d_name;
+            struct stat st;
+            if (stat(child.c_str(), &st) == 0) {
+                if (S_ISDIR(st.st_mode)) total += _dir_size(child);
+                else total += (size_t)st.st_size;
+            }
+        }
+        closedir(d);
+        return total;
     }
+public:
 };
 
 extern LittleFS_class LittleFS;

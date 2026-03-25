@@ -129,9 +129,20 @@ void shell_clear()
 
 void shell_df(const String &)
 {
-    size_t total = LittleFS.totalBytes();
-    size_t used = LittleFS.usedBytes();
-    shell_println_wrapped("/ : " + String(used / 1024) + " Ko utilises / " + String(total / 1024) + " Ko");
+    size_t total  = LittleFS.totalBytes();
+    size_t used   = LittleFS.usedBytes();
+    size_t free_  = total - used;
+    int    pct    = total ? (int)(100UL * used / total) : 0;
+    String bar    = "[";
+    for (int i = 0; i < 20; i++) bar += (i < pct / 5) ? '#' : '.';
+    bar += "]";
+    shell_println_wrapped("Filesystem  Taille   Utilise  Libre    Usage");
+    char line[64];
+    snprintf(line, sizeof(line), "LittleFS    %4uKo   %4uKo   %4uKo   %d%%",
+             (unsigned)(total/1024), (unsigned)(used/1024),
+             (unsigned)(free_/1024), pct);
+    shell_println_wrapped(String(line));
+    shell_println_wrapped(bar + " " + String(pct) + "%");
 }
 
 void shell_echo(const String &args)
