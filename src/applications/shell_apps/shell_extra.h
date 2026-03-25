@@ -18,7 +18,6 @@ void shell_du(const String &args);
 void shell_nslookup(const String &args);
 void shell_sleep(const String &args);
 void shell_sudo(const String &args);
-void shell_submit(const String &args);
 void shell_ctftime(const String &args);
 
 #endif // SHELL_EXTRA_H

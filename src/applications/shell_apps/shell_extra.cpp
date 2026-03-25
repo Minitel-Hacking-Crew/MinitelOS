@@ -384,25 +384,6 @@ void shell_chown(const String &args) {
     shell_println_wrapped(path + " -> " + owner + ":" + group);
 }
 
-// ─── submit ──────────────────────────────────────────────────────────────────
-static const char *CTF_FLAG = "FLAG{cr0n_b4ckd00r_w4s_h3r3}";
-
-void shell_submit(const String &args) {
-    String flag = args; flag.trim();
-    if (flag.isEmpty()) { shell_println_wrapped("Usage: submit <FLAG>"); return; }
-    if (flag == String(CTF_FLAG)) {
-        unsigned long t = millis() / 1000;
-        unsigned long m = t / 60, s = t % 60;
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%s en %02lu:%02lu", sessionUsername.c_str(), m, s);
-        shell_println_wrapped("*** FLAG VALIDE ! Bravo " + sessionUsername + " ! ***");
-        shell_println_wrapped("Temps : " + String(m) + "m" + String(s) + "s");
-        write_to_file("/tmp/scores.txt", String(buf) + "\n", true, true);
-    } else {
-        shell_println_wrapped("Flag incorrect. Continuez !");
-    }
-}
-
 // ─── ctftime ─────────────────────────────────────────────────────────────────
 void shell_ctftime(const String &) {
     // Durée configurée dans /root/.ctf_config (en secondes), défaut 720s (12min)

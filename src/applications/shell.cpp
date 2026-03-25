@@ -95,7 +95,6 @@ ShellCommand commands[] = {
     {"nslookup", shell_nslookup},
     {"sleep",    shell_sleep},
     {"sudo",     shell_sudo},
-    {"submit",   shell_submit},
     {"ctftime",  shell_ctftime},
 };
 
