@@ -58,6 +58,14 @@ void cronTask(void *pvParameters)
             {
                 if (now - task.lastRun >= task.intervalMs)
                 {
+                    // Les tâches cron s'exécutent toujours en root
+                    String savedUser  = sessionUsername;
+                    String savedLevel = sessionAccessLevel;
+                    String savedDir   = shell_current_dir;
+                    sessionUsername    = "root";
+                    sessionAccessLevel = "root";
+                    shell_current_dir  = "/root";
+
                     bool oldRedirect = shell_redirect_mode;
                     shell_redirect_mode = true;
                     shell_output_buffer = "";
@@ -82,6 +90,11 @@ void cronTask(void *pvParameters)
                     shell_redirect_mode = oldRedirect;
                     shell_output_buffer = "";
                     task.lastRun = now;
+
+                    // Restaure la session utilisateur
+                    sessionUsername    = savedUser;
+                    sessionAccessLevel = savedLevel;
+                    shell_current_dir  = savedDir;
                 }
             }
         }

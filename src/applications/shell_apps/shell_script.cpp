@@ -10,7 +10,7 @@ extern std::map<String, String> shell_vars;
 extern int    numCommands;
 extern bool   shell_break_flag;
 extern void   shell_println_wrapped(const String &text);
-extern void   write_to_file(const String &filename, const String &content, bool append);
+// write_to_file déclarée dans shell.h (inclus via globals.h)
 extern String shell_abspath(const String &path);
 extern String shell_output_buffer;
 extern bool   shell_redirect_mode;
@@ -25,6 +25,8 @@ float round2(float val) { return roundf(val * 100.0f) / 100.0f; }
 
 // Substitute $var references, longest-first to avoid substring collisions.
 static String subst_vars(const String &src) {
+    if (shell_int_vars.empty() && shell_float_vars.empty() &&
+        shell_string_vars.empty() && shell_bool_vars.empty()) return src;
     std::vector<std::pair<String, String>> pairs;
     for (auto &kv : shell_int_vars)
         pairs.push_back({"$" + kv.first, String(kv.second)});
@@ -178,7 +180,7 @@ void shell_eval_line(const String &line) {
     if (!found && realCmd.length() > 0)
         shell_println_wrapped("Commande inconnue : " + cmd);
     if (redirectFile.length() > 0) {
-        write_to_file(shell_abspath(redirectFile), shell_output_buffer, appendMode);
+        write_to_file(shell_abspath(redirectFile), shell_output_buffer, appendMode, true);
         shell_redirect_mode = false;
     } else if (prev_redir) {
         prev_buf += shell_output_buffer;

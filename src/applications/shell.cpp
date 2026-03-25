@@ -31,13 +31,9 @@ void shell_adduser(const String &);
 void shell_history_clear(const String &)
 {
     shell_history.clear();
-    save_shell_history(sessionUsername);
-    // Efface le fichier sur disque
     String histfile = "/home/" + sessionUsername + "/.msh_history";
     if (LittleFS.exists(histfile))
-    {
         LittleFS.remove(histfile);
-    }
     shell_println_wrapped("Historique de commande vide pour l'utilisateur :" + sessionUsername + " (niveau: " + sessionAccessLevel + ")");
 }
 extern void shell_motd();
@@ -99,6 +95,8 @@ ShellCommand commands[] = {
     {"nslookup", shell_nslookup},
     {"sleep",    shell_sleep},
     {"sudo",     shell_sudo},
+    {"submit",   shell_submit},
+    {"ctftime",  shell_ctftime},
 };
 
 int numCommands = sizeof(commands) / sizeof(commands[0]);
@@ -125,7 +123,7 @@ String ssh_password;
 bool in_ssh_session = false;
 bool shell_break_flag = false;
 
-void write_to_file(const String &filename, const String &content, bool append)
+void write_to_file(const String &filename, const String &content, bool append, bool silent)
 {
     File file = LittleFS.open(filename, append ? FILE_APPEND : FILE_WRITE);
     if (!file)
@@ -135,7 +133,8 @@ void write_to_file(const String &filename, const String &content, bool append)
     }
     file.print(content);
     file.close();
-    shell_println_wrapped(String(append ? "Ajout dans : " : "Ecrit dans : ") + filename);
+    if (!silent)
+        shell_println_wrapped(String(append ? "Ajout dans : " : "Ecrit dans : ") + filename);
 }
 
 void attendreToucheMore()
@@ -470,7 +469,7 @@ void shell(bool skipInitScreen)
         }
 
         String prompt = "";
-        String homeDir = "/home/" + sessionUsername;
+        String homeDir = (sessionUsername == "root") ? "/root" : "/home/" + sessionUsername;
         if (shell_current_dir.startsWith(homeDir))
         {
             String subdir = shell_current_dir.substring(homeDir.length());
@@ -490,6 +489,17 @@ void shell(bool skipInitScreen)
         String cmdLine = "";
         shell_history_index = shell_history.size();
         minitel.print(prompt);
+
+        // Efface n caractères en arrière depuis la position du curseur
+        auto eraseLine = [&](int n) {
+            if (n <= 0) return;
+            minitel.moveCursorLeft(n);
+            String blanks = "";
+            for (int i = 0; i < n; i++) blanks += ' ';
+            minitel.print(blanks);
+            minitel.moveCursorLeft(n);
+        };
+
         while (true)
         {
             uint32_t k = minitel.getKeyCode(false);
@@ -508,12 +518,7 @@ void shell(bool skipInitScreen)
                 if (shell_history_index > 0 && !shell_history.empty())
                 {
                     shell_history_index--;
-                    for (int i = 0; i < cmdLine.length(); ++i)
-                    {
-                        minitel.moveCursorLeft(1);
-                        minitel.print(" ");
-                        minitel.moveCursorLeft(1);
-                    }
+                    eraseLine(cmdLine.length());
                     cmdLine = shell_history[shell_history_index];
                     minitel.print(cmdLine);
                 }
@@ -523,24 +528,14 @@ void shell(bool skipInitScreen)
                 if (shell_history_index < (int)shell_history.size() - 1)
                 {
                     shell_history_index++;
-                    for (int i = 0; i < cmdLine.length(); ++i)
-                    {
-                        minitel.moveCursorLeft(1);
-                        minitel.print(" ");
-                        minitel.moveCursorLeft(1);
-                    }
+                    eraseLine(cmdLine.length());
                     cmdLine = shell_history[shell_history_index];
                     minitel.print(cmdLine);
                 }
                 else if (shell_history_index == (int)shell_history.size() - 1)
                 {
                     shell_history_index++;
-                    for (int i = 0; i < cmdLine.length(); ++i)
-                    {
-                        minitel.moveCursorLeft(1);
-                        minitel.print(" ");
-                        minitel.moveCursorLeft(1);
-                    }
+                    eraseLine(cmdLine.length());
                     cmdLine = "";
                 }
             }
@@ -567,27 +562,26 @@ void shell(bool skipInitScreen)
             add_shell_history(sessionUsername, cmdLine);
         }
 
-        for (auto &kv : shell_int_vars)
+        // Substitution $var — longest-first pour éviter les collisions de noms
         {
-            cmdLine.replace("$" + kv.first, String(kv.second));
-        }
-        for (auto &kv : shell_float_vars)
-        {
-            char buf[16];
-            dtostrf(kv.second, 0, 2, buf);
-            cmdLine.replace("$" + kv.first, String(buf));
-        }
-        for (auto &kv : shell_string_vars)
-        {
-            cmdLine.replace("$" + kv.first, kv.second);
-        }
-        for (auto &kv : shell_bool_vars)
-        {
-            cmdLine.replace("$" + kv.first, kv.second ? "true" : "false");
-        }
-        for (auto &kv : shell_vars)
-        {
-            cmdLine.replace("$" + kv.first, kv.second);
+            std::vector<std::pair<String,String>> pairs;
+            for (auto &kv : shell_int_vars)
+                pairs.push_back({"$" + kv.first, String(kv.second)});
+            for (auto &kv : shell_float_vars) {
+                char buf[16]; dtostrf(kv.second, 0, 2, buf);
+                pairs.push_back({"$" + kv.first, String(buf)});
+            }
+            for (auto &kv : shell_string_vars)
+                pairs.push_back({"$" + kv.first, kv.second});
+            for (auto &kv : shell_bool_vars)
+                pairs.push_back({"$" + kv.first, kv.second ? "true" : "false"});
+            for (auto &kv : shell_vars)
+                pairs.push_back({"$" + kv.first, kv.second});
+            std::sort(pairs.begin(), pairs.end(),
+                [](const std::pair<String,String> &a, const std::pair<String,String> &b){
+                    return a.first.length() > b.first.length();
+                });
+            for (auto &p : pairs) cmdLine.replace(p.first, p.second);
         }
 
         if (cmdLine.length() == 0)

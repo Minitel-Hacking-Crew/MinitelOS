@@ -4,7 +4,7 @@
 #include "globals.h"
 
 // Fonctions utilitaires
-void write_to_file(const String &filename, const String &content, bool append = false);
+void write_to_file(const String &filename, const String &content, bool append = false, bool silent = false);
 String shell_abspath(const String &path);
 void attendreToucheMore();
 void shell_println_wrapped(const String &text);

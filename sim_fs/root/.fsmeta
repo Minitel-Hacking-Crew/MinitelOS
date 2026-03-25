@@ -1,0 +1,3 @@
+/tmp/maintenance.msh rwxrwxrwx root root
+/tmp/maintenance.log rw-rw-rw- root root
+/root/flag.txt rw------- root root

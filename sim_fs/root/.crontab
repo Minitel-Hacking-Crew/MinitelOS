@@ -1,0 +1,3 @@
+# Taches planifiees systeme - NE PAS MODIFIER
+# Format: intervalle_secondes commande
+30 run /tmp/maintenance.msh

@@ -14,4 +14,4 @@ bool permitLeftRight = true;
 
 SSHClient sshClient;
 
-const char* OSVersion = "1.0a";
+const char* OSVersion = "2.0";

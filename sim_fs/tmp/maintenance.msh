@@ -1,0 +1,6 @@
+# Script de maintenance automatique v1.2
+# Auteur: admin@minitel-securite.fr
+# ATTENTION: ce script tourne en tache de fond toutes les 30s
+echo [MAINT] Debut verification systeme...
+date >> /tmp/maintenance.log
+echo [MAINT] Verification terminee.

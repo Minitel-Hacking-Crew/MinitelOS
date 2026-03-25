@@ -5,4 +5,7 @@ releases/
 *.bin
 *.hex
 *.map
-builds/
+builds/.DS_Store
+sim_fs/**/.msh_history
+sim_fs/tmp/scores.txt
+sim_fs/tmp/loot.txt

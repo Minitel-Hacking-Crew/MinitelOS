@@ -383,3 +383,50 @@ void shell_chown(const String &args) {
     write_meta(path, m.perms, owner, group);
     shell_println_wrapped(path + " -> " + owner + ":" + group);
 }
+
+// ─── submit ──────────────────────────────────────────────────────────────────
+static const char *CTF_FLAG = "FLAG{cr0n_b4ckd00r_w4s_h3r3}";
+
+void shell_submit(const String &args) {
+    String flag = args; flag.trim();
+    if (flag.isEmpty()) { shell_println_wrapped("Usage: submit <FLAG>"); return; }
+    if (flag == String(CTF_FLAG)) {
+        unsigned long t = millis() / 1000;
+        unsigned long m = t / 60, s = t % 60;
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s en %02lu:%02lu", sessionUsername.c_str(), m, s);
+        shell_println_wrapped("*** FLAG VALIDE ! Bravo " + sessionUsername + " ! ***");
+        shell_println_wrapped("Temps : " + String(m) + "m" + String(s) + "s");
+        write_to_file("/tmp/scores.txt", String(buf) + "\n", true, true);
+    } else {
+        shell_println_wrapped("Flag incorrect. Continuez !");
+    }
+}
+
+// ─── ctftime ─────────────────────────────────────────────────────────────────
+void shell_ctftime(const String &) {
+    // Durée configurée dans /root/.ctf_config (en secondes), défaut 720s (12min)
+    unsigned long dur_s = 720;
+    if (LittleFS.exists("/root/.ctf_config")) {
+        File f = LittleFS.open("/root/.ctf_config", "r");
+        if (f) {
+            String line = f.readStringUntil('\n'); line.trim();
+            if (line.toInt() > 0) dur_s = (unsigned long)line.toInt();
+            f.close();
+        }
+    }
+    unsigned long elapsed_s  = millis() / 1000;
+    unsigned long remain_s   = (elapsed_s < dur_s) ? (dur_s - elapsed_s) : 0;
+    char buf[64];
+    snprintf(buf, sizeof(buf), "Ecoule  : %02lu:%02lu", elapsed_s / 60, elapsed_s % 60);
+    shell_println_wrapped(String(buf));
+    snprintf(buf, sizeof(buf), "Restant : %02lu:%02lu", remain_s / 60, remain_s % 60);
+    shell_println_wrapped(String(buf));
+    int pct = (int)(100UL * elapsed_s / dur_s);
+    if (pct > 100) pct = 100;
+    String bar = "[";
+    for (int i = 0; i < 20; i++) bar += (i < pct / 5) ? '#' : '.';
+    bar += "] " + String(pct) + "%";
+    shell_println_wrapped(bar);
+    if (remain_s == 0) shell_println_wrapped("!!! TEMPS ECOULE !!!");
+}

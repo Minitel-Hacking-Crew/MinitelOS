@@ -1,6 +1,6 @@
 # MinitelOS
 
-![Version](https://img.shields.io/badge/version-1.0a-blue)
+![Version](https://img.shields.io/badge/version-2.0-blue)
 ![Platform](https://img.shields.io/badge/platform-ESP32-green)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2F%20PlatformIO-orange)
 

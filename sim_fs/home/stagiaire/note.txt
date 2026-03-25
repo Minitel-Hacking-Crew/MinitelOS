@@ -1,0 +1,4 @@
+TODO perso:
+- demander a l'admin de desactiver le script de maintenance
+  apres l'incident de janvier (droits mal configures apparemment)
+- voir pourquoi le cron tourne encore
