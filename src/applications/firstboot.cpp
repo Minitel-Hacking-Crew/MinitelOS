@@ -125,7 +125,7 @@ static void fb_wifi_setup() {
 // ------------------------------------------------------------------ public API
 
 bool is_first_boot() {
-    return !LittleFS.exists("/root/.users");
+    return !LittleFS.exists("/etc/shadow");
 }
 
 void run_first_boot_setup() {
@@ -205,10 +205,11 @@ void run_first_boot_setup() {
     // --- Ecriture des fichiers ---
     if (!LittleFS.exists("/root")) LittleFS.mkdir("/root");
     if (!LittleFS.exists("/home")) LittleFS.mkdir("/home");
+    if (!LittleFS.exists("/etc"))  LittleFS.mkdir("/etc");
     String userHome = "/home/" + userName;
     if (!LittleFS.exists(userHome)) LittleFS.mkdir(userHome);
 
-    File usersFile = LittleFS.open("/root/.users", "w");
+    File usersFile = LittleFS.open("/etc/shadow", "w");
     if (usersFile) {
         usersFile.println("root:" + fb_md5(rootPass) + ":root");
         usersFile.println(userName + ":" + fb_md5(userPass) + ":" + userLevel);

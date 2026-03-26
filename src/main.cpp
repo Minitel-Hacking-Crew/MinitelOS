@@ -93,7 +93,7 @@ void setup()
   if (guideCount >= 6)
   {
     // Reset : supprime la base utilisateurs => force le wizard au prochain boot
-    LittleFS.remove("/root/.users");
+    LittleFS.remove("/etc/shadow");
     minitel.println("Base utilisateurs supprimee.");
     minitel.println("Redemarrage...");
     delay(1500);

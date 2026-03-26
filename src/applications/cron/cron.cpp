@@ -44,7 +44,6 @@ void load_crontab()
         }
     }
     f.close();
-    minitel.println("[CRON] " + String(taskCount) + " taches chargees.");
 }
 
 void cronTask(void *pvParameters)
@@ -58,7 +57,7 @@ void cronTask(void *pvParameters)
             {
                 if (now - task.lastRun >= task.intervalMs)
                 {
-                    // Les tâches cron s'exécutent toujours en root
+                    // Les tâches cron s'exécutent en root
                     String savedUser  = sessionUsername;
                     String savedLevel = sessionAccessLevel;
                     String savedDir   = shell_current_dir;

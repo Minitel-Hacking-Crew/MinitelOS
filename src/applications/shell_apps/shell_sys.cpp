@@ -44,7 +44,7 @@ void shell_login()
         minitel.println();
 
         String userHash = md5(inputPass);
-        File usersFile = LittleFS.open("/root/.users", "r");
+        File usersFile = LittleFS.open("/etc/shadow", "r");
         String debugHashAttendu = "";
         bool debugUserFound = false;
         found = false;
@@ -213,7 +213,7 @@ void shell_passwd()
     }
     String newHash = md5(newPass1);
 
-    File usersFile = LittleFS.open("/root/.users", "r");
+    File usersFile = LittleFS.open("/etc/shadow", "r");
     if (!usersFile)
     {
         shell_println_wrapped("Impossible d'acceder au fichier des utilisateurs.");
@@ -249,7 +249,7 @@ void shell_passwd()
     usersFile.close();
 
     // Reecrit le fichier
-    usersFile = LittleFS.open("/root/.users", FILE_WRITE);
+    usersFile = LittleFS.open("/etc/shadow", FILE_WRITE);
     if (!usersFile)
     {
         shell_println_wrapped("Erreur lors de la mise a jour du mot de passe.");
@@ -419,6 +419,24 @@ void shell_motd(const String &args)
     String motdFile = "/.motd";
     String trimmed = args;
     trimmed.trim();
+    if (trimmed == "--help" || trimmed == "-h")
+    {
+        shell_println_wrapped("Usage: motd [--help] [-s <message>]");
+        shell_println_wrapped("");
+        shell_println_wrapped("Affiche le message du jour systeme.");
+        shell_println_wrapped("Si ~/motd_perso.txt existe, les commandes");
+        shell_println_wrapped("qu'il contient sont executees et leur");
+        shell_println_wrapped("sortie est ajoutee a l'affichage.");
+        shell_println_wrapped("");
+        shell_println_wrapped("Options:");
+        shell_println_wrapped("  -s <msg>   Definir le motd systeme (root)");
+        shell_println_wrapped("  --help     Afficher cette aide");
+        shell_println_wrapped("");
+        shell_println_wrapped("Exemple de ~/motd_perso.txt :");
+        shell_println_wrapped("  echo Bonjour !");
+        shell_println_wrapped("  date");
+        return;
+    }
     if (trimmed.startsWith("-s "))
     {
         String msg = trimmed.substring(3);
@@ -498,8 +516,8 @@ void shell_su(const String &args)
         return;
     }
 
-    // Cherche l'utilisateur dans /root/.users
-    File usersFile = LittleFS.open("/root/.users", "r");
+    // Cherche l'utilisateur dans /etc/shadow
+    File usersFile = LittleFS.open("/etc/shadow", "r");
     if (!usersFile)
     {
         shell_println_wrapped("Impossible d'acceder a la base des utilisateurs.");
@@ -613,7 +631,7 @@ void shell_adduser(const String &)
         shell_println_wrapped("Nom d'utilisateur vide.");
         return;
     }
-    File usersFile = LittleFS.open("/root/.users", "r");
+    File usersFile = LittleFS.open("/etc/shadow", "r");
     if (usersFile)
     {
         while (usersFile.available())
@@ -678,7 +696,7 @@ void shell_adduser(const String &)
         return out;
     };
     String hash = md5(password);
-    usersFile = LittleFS.open("/root/.users", "a");
+    usersFile = LittleFS.open("/etc/shadow", "a");
     if (!usersFile)
     {
         minitel.println();
@@ -723,7 +741,7 @@ void shell_deluser(const String &)
         shell_println_wrapped("Impossible de supprimer root.");
         return;
     }
-    File usersFile = LittleFS.open("/root/.users", "r");
+    File usersFile = LittleFS.open("/etc/shadow", "r");
     if (!usersFile)
     {
         minitel.println();
@@ -762,7 +780,7 @@ void shell_deluser(const String &)
         shell_println_wrapped("Utilisateur introuvable : " + username);
         return;
     }
-    usersFile = LittleFS.open("/root/.users", "w");
+    usersFile = LittleFS.open("/etc/shadow", "w");
     if (!usersFile)
     {
         minitel.println();

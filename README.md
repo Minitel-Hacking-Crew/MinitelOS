@@ -48,7 +48,7 @@ Au premier boot (ou après réinitialisation), un assistant de configuration se 
 3. **WiFi** — scan et connexion optionnelle
 4. **MOTD** — message affiché à chaque connexion
 
-> Réinitialisation : appuyer 7× sur `CORRECTION` au démarrage (efface `/root/.users` et redémarre).
+> Réinitialisation : appuyer 7× sur `CORRECTION` au démarrage (efface `/etc/shadow` et redémarre).
 
 ---
 
@@ -75,7 +75,9 @@ Au premier boot (ou après réinitialisation), un assistant de configuration se 
 | `free` | Mémoire heap ESP32 |
 | `ps` | Processus actifs + tâches cron |
 | `kill <index>` | Supprimer une tâche cron |
-| `motd` | Afficher / modifier le message du jour |
+| `motd` | Afficher le message du jour (+ exécute `~/motd_perso.txt` si présent) |
+| `motd --help` | Aide détaillée sur la commande motd |
+| `motd -s <msg>` | Définir le message du jour système (root) |
 
 ### Fichiers
 | Commande | Description |
@@ -96,6 +98,18 @@ Au premier boot (ou après réinitialisation), un assistant de configuration se 
 | `chown <user>[:<group>] <fichier>` | Changer le propriétaire |
 | `df` | Espace disque LittleFS (barre de progression) |
 | `du [path]` | Taille d'un fichier ou répertoire |
+
+### MOTD personnalisé
+
+Chaque utilisateur peut créer un fichier `~/motd_perso.txt` contenant des commandes shell. Ces commandes sont exécutées automatiquement à l'affichage du MOTD (connexion ou appel manuel à `motd`).
+
+```bash
+# Exemple : /home/alice/motd_perso.txt
+echo Bienvenue Alice !
+date
+```
+
+> Voir `motd --help` pour la liste complète des options.
 
 ### Réseau
 | Commande | Description |
@@ -225,7 +239,7 @@ Trois niveaux : `user` → `admin` → `root`
 ### Stockage
 | Fichier | Contenu |
 |---------|---------|
-| `/root/.users` | `user:MD5(pass):level` |
+| `/etc/shadow` | `user:MD5(pass):level` |
 | `/root/.crontab` | Tâches cron |
 | `/root/.fsmeta` | Permissions chmod/chown |
 | `/.motd` | Message du jour |

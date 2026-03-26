@@ -7,7 +7,7 @@ void shell_cat(const String &args)
     filename.trim();
     if (sessionAccessLevel != "root")
     {
-        if (filename == "/root" || filename.startsWith("/root/"))
+        if (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow")
         {
             shell_println_wrapped("Acces refuse");
             return;
@@ -156,7 +156,7 @@ void shell_create(const String &args)
     }
     if (sessionAccessLevel != "root")
     {
-        if (filename == "/root" || filename.startsWith("/root/"))
+        if (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow")
         {
             shell_println_wrapped("Acces refuse");
             return;
@@ -183,9 +183,23 @@ void shell_create(const String &args)
 }
 void shell_ls(const String &args)
 {
-    String dir = shell_current_dir;
-    bool showHidden = args.indexOf("-h") != -1;
+    bool showHidden = args.indexOf("-a") != -1 || args.indexOf("-h") != -1;
     bool longFmt    = args.indexOf("-l") != -1;
+
+    // Extraire le chemin parmi les arguments (token qui ne commence pas par -)
+    String dir = shell_current_dir;
+    String trimmed = args;
+    trimmed.trim();
+    int idx = 0;
+    while (idx < (int)trimmed.length()) {
+        int sp = trimmed.indexOf(' ', idx);
+        String tok = (sp == -1) ? trimmed.substring(idx) : trimmed.substring(idx, sp);
+        if (!tok.startsWith("-") && tok.length() > 0) {
+            dir = shell_abspath(tok);
+            break;
+        }
+        idx = (sp == -1) ? trimmed.length() : sp + 1;
+    }
 
     if (sessionAccessLevel != "root")
     {
@@ -384,7 +398,7 @@ void shell_rm(const String &args)
     }
     if (sessionAccessLevel != "root")
     {
-        if (filename == "/root" || filename.startsWith("/root/"))
+        if (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow")
         {
             shell_println_wrapped("Acces refuse");
             return;

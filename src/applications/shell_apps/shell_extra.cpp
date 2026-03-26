@@ -325,7 +325,7 @@ void shell_sudo(const String &args) {
     String pass = saisirTexte("Mot de passe root : ", true, 64, "");
     minitel.println();
     // Lecture du hash root dans .users
-    File uf = LittleFS.open("/root/.users", "r");
+    File uf = LittleFS.open("/etc/shadow", "r");
     if (!uf) { shell_println_wrapped("Erreur : fichier utilisateurs introuvable."); return; }
     String rootHash = "";
     while (uf.available()) {

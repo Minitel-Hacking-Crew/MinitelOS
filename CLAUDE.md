@@ -55,7 +55,7 @@ All shell commands are registered as `ShellCommand { const char *name; void (*fu
 
 ### State & Storage
 
-- **User database**: `/root/.users` on LittleFS (MD5-hashed passwords, privilege levels)
+- **User database**: `/etc/shadow` on LittleFS (MD5-hashed passwords, privilege levels)
 - **Home directories**: `/home/<user>/` per user, `/root` for root
 - **Shell state**: `shell_current_dir`, `shell_vars` (string map), `shell_int_vars` (int map), command history deque — all declared in `globals.h`
 - **WiFi credentials**: persisted in NVS (non-volatile storage)

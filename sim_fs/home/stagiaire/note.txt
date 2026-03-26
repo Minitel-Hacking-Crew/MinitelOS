@@ -1,4 +1,0 @@
-TODO perso :
-- demander a l'admin de corriger les droits sur
-  /scripts/maintenance.msh (incident de janvier)
-- voir pourquoi le cron tourne encore en root

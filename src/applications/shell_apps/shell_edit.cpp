@@ -10,7 +10,7 @@ void shell_edit(const String &args)
         return;
     }
     if (sessionAccessLevel != "root" &&
-        (filename == "/root" || filename.startsWith("/root/")))
+        (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow"))
     {
         shell_println_wrapped("Acces refuse");
         return;
@@ -122,14 +122,25 @@ void shell_edit(const String &args)
         else if (cmd == "b")
         {
             String newLine = saisirTexte("b: ", false, 128, "");
-            lines.insert(lines.begin() + current, newLine);
+            if (lines.empty())
+                lines.push_back(newLine);
+            else
+                lines.insert(lines.begin() + current, newLine);
             modified = true;
         }
         else if (cmd == "a" || cmd == "")
         {
             String newLine = saisirTexte("a: ", false, 128, "");
-            lines.insert(lines.begin() + current + 1, newLine);
-            current++;
+            if (lines.empty())
+            {
+                lines.push_back(newLine);
+                current = 0;
+            }
+            else
+            {
+                lines.insert(lines.begin() + current + 1, newLine);
+                current++;
+            }
             modified = true;
         }
         else if (cmd.startsWith("n"))
@@ -143,10 +154,12 @@ void shell_edit(const String &args)
                 if (v > 0)
                     offset = v;
             }
-            if (current + offset < (int)lines.size())
+            if (lines.empty())
+                current = 0;
+            else if (current + offset < (int)lines.size())
                 current += offset;
             else
-                current = lines.size() - 1;
+                current = (int)lines.size() - 1;
         }
         else if (cmd.startsWith("p"))
         {
