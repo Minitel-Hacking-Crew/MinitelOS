@@ -114,33 +114,34 @@ Exploiter le cron world-writable pour lire `/root/flag1.txt` et obtenir les cred
 
 ```
 1. ps
-   → [2] 30s run /tmp/maintenance.msh  (root)
+   → [2] 30s run /scripts/maintenance.msh  (root)
 
-2. cat /tmp/maintenance.msh
+2. cat /scripts/maintenance.msh
    → Script légitime, world-writable
 
-3. edit /tmp/maintenance.msh
-   → Injecter : cat /root/flag1.txt > /tmp/loot.txt
+3. edit /scripts/maintenance.msh
+   → Ajouter ces deux lignes (touche 'a' pour insérer) :
+      cat /root/flag1.txt > /tmp/loot.txt
+      cat /root/.ctf_pivot1 >> /tmp/loot.txt
+   → Sauvegarder (w)
 
 4. (attendre ~30 secondes)
 
 5. cat /tmp/loot.txt
    → FLAG{cr0n_2_p1v0t}
-
-6. cat /tmp/users.bak
    → user:e206a54e97690cce50cc872dd70ee896:user
 
-7. Craquer le hash MD5 de user (wordlist C1)
+6. Craquer le hash MD5 de user (wordlist C1)
    → "linux"
 
-8. su user  →  password : linux
+7. su user  →  password : linux
 ```
 
 ### Indices papier (progressifs)
 
 1. *"Un processus tourne en arrière-plan en tant que root..."*
-2. *"Le script de maintenance est dans /tmp. Qui peut le modifier ?"*
-3. *"Vous pouvez écrire dans le script. Que se passe-t-il si vous y mettez une commande ?"*
+2. *"Le script de maintenance est dans /scripts. Qui peut le modifier ?"*
+3. *"Vous pouvez écrire dans le script. Que se passe-t-il si vous y mettez deux commandes ?"*
 
 ### Wordlist C1
 
@@ -168,9 +169,9 @@ Cracker le hash admin depuis le backup exposé, devenir admin, lire `/home/admin
 
 ```
 1. cat TODO.txt
-   → "rappeler l'admin de supprimer le backup dans /tmp"
+   → "effacer backup.bak (migration terminée depuis longtemps)"
 
-2. cat /tmp/users.bak
+2. cat backup.bak
    → admin:bb3c3e98175d33c8300fbb0e84bf9e9f:admin
 
 3. Craquer le hash MD5 de admin (wordlist C2)
@@ -184,7 +185,7 @@ Cracker le hash admin depuis le backup exposé, devenir admin, lire `/home/admin
 
 ### Indices papier (progressifs)
 
-1. *"Il y a des fichiers intéressants dans /tmp..."*
+1. *"Regardez bien votre répertoire personnel..."*
 2. *"Le format est user:MD5(password):niveau"*
 3. *"L'admin a de mauvaises habitudes de mot de passe..."*
 
@@ -253,24 +254,26 @@ sim_fs/
 ├── .motd                        # Bannière CTF
 ├── home/
 │   ├── stagiaire/
-│   │   └── note.txt             # Indice C1 : droits mal configurés
+│   │   └── note.txt             # Indice C1 : droits mal configurés sur /scripts/
 │   ├── user/
-│   │   └── TODO.txt             # Indice C2 : backup dans /tmp
+│   │   ├── TODO.txt             # Indice C2 : backup.bak à effacer
+│   │   └── backup.bak           # Hash admin MD5 (user-only — stagiaire bloqué)
 │   └── admin/
-│       ├── flag2.txt            # FLAG Challenge 2 (admin only)
-│       ├── notes_perso.txt      # Infos admin (hint motd)
+│       ├── flag2.txt            # FLAG Challenge 2 (admin-only)
+│       ├── notes_perso.txt      # Hint motd
 │       └── README.txt           # Indice C3 : motd exécute en root
 ├── root/                        # Accessible root uniquement
 │   ├── .users                   # Base de comptes (MD5)
-│   ├── .crontab                 # Tâche cron : 30s run /tmp/maintenance.msh
+│   ├── .crontab                 # Tâche cron : 30s run /scripts/maintenance.msh
 │   ├── .ctf_config              # Durée CTF en secondes (900 = 15 min)
 │   ├── .fsmeta                  # Permissions fichiers
+│   ├── .ctf_pivot1              # Hash user MD5 (root-only — extrait via cron C1)
 │   ├── flag1.txt                # FLAG Challenge 1
 │   └── flag3.txt                # FLAG Challenge 3
-└── tmp/                         # World-accessible
-    ├── maintenance.msh          # Script cron world-writable (vecteur C1)
-    ├── maintenance.log          # Log d'exécution
-    └── users.bak                # Backup comptes exposé (vecteur C2)
+├── scripts/                     # World-accessible
+│   ├── maintenance.msh          # Script cron world-writable (vecteur C1)
+│   └── maintenance.log          # Log d'exécution
+└── tmp/                         # World-accessible (sorties des injections)
 ```
 
 ---
@@ -280,8 +283,8 @@ sim_fs/
 | User | Password | Level | Obtenu |
 |------|----------|-------|--------|
 | `stagiaire` | 1234 | user | Donné sur fiche papier |
-| `user` | linux | user | Cracké via C1 (hash dans users.bak) |
-| `admin` | minitel | admin | Cracké via C2 (hash dans users.bak) |
+| `user` | linux | user | Cracké via C1 (hash dans /tmp/loot.txt après injection cron) |
+| `admin` | minitel | admin | Cracké via C2 (hash dans /home/user/backup.bak) |
 | `root` | T3lm1n1 | root | Jamais nécessaire — C3 bypasse le password |
 
 ---
@@ -290,7 +293,7 @@ sim_fs/
 
 - **Reset entre équipes** : `rm -rf sim_fs/ && .pio/build/native/program` (simulateur) ou reboot ESP32
 - **Ajuster le timer** : modifier `sim_fs/root/.ctf_config` (secondes)
-- **Cron démo rapide** : mettre `5` dans `.crontab` au lieu de `30`
+- **Cron démo rapide** : mettre `5` dans `sim_fs/root/.crontab` au lieu de `30`
 - **Vérifier la progression** : `ctftime` affiche le temps restant à tout moment
 - **Artefacts à nettoyer** (gérés automatiquement par CTF_MODE au boot) :
   - `/tmp/loot.txt` — flag C1
