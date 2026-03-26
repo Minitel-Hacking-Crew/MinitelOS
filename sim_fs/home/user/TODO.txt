@@ -1,3 +1,3 @@
-- rappeler l'admin pour supprimer l'ancien backup dans /tmp
-  (il a exporte les comptes la semaine derniere pour la migration)
-- changer mon mot de passe
+- rappeler l'admin de supprimer le backup dans /tmp
+  (comptes exportes pour la migration, jamais effaces)
+- changer mon mot de passe (trop simple)

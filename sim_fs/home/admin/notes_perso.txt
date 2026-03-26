@@ -1,8 +1,8 @@
-Memo perso - CONFIDENTIEL
+Memo perso admin - CONFIDENTIEL
 
-Mots de passe systeme (a changer ASAP) :
-  root : T3lm1n1
-  admin : minitel
-  backup FTP : backup42
+Compte : admin / minitel (a changer ASAP !)
 
-Contact urgence : 06 XX XX XX XX
+Note de service : le systeme de motd personnalise
+a ete active pour les comptes utilisateurs afin
+d'afficher des informations dynamiques au login.
+Voir README dans le repertoire home pour details.
