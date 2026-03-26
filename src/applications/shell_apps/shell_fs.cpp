@@ -1,12 +1,23 @@
 #include "globals.h"
+#include "applications/shell_apps/shell_extra.h"
+#include "applications/cron/cron.h"
 
 void shell_cat(const String &args)
 {
     String filename = shell_abspath(args);
     filename.trim();
+    // /root/ interdit même au cron (qui tourne en root) — accès interactif uniquement
+    if (filename == "/root" || filename.startsWith("/root/"))
+    {
+        if (sessionAccessLevel != "root" || cron_executing)
+        {
+            shell_println_wrapped("Acces refuse");
+            return;
+        }
+    }
     if (sessionAccessLevel != "root")
     {
-        if (filename == "/root" || filename.startsWith("/root/"))
+        if (filename == "/etc/shadow")
         {
             shell_println_wrapped("Acces refuse");
             return;
@@ -155,7 +166,7 @@ void shell_create(const String &args)
     }
     if (sessionAccessLevel != "root")
     {
-        if (filename == "/root" || filename.startsWith("/root/"))
+        if (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow")
         {
             shell_println_wrapped("Acces refuse");
             return;
@@ -182,8 +193,24 @@ void shell_create(const String &args)
 }
 void shell_ls(const String &args)
 {
+    bool showHidden = args.indexOf("-a") != -1 || args.indexOf("-h") != -1;
+    bool longFmt    = args.indexOf("-l") != -1;
+
+    // Extraire le chemin parmi les arguments (token qui ne commence pas par -)
     String dir = shell_current_dir;
-    bool showHidden = args.indexOf("-h") != -1;
+    String trimmed = args;
+    trimmed.trim();
+    int idx = 0;
+    while (idx < (int)trimmed.length()) {
+        int sp = trimmed.indexOf(' ', idx);
+        String tok = (sp == -1) ? trimmed.substring(idx) : trimmed.substring(idx, sp);
+        if (!tok.startsWith("-") && tok.length() > 0) {
+            dir = shell_abspath(tok);
+            break;
+        }
+        idx = (sp == -1) ? trimmed.length() : sp + 1;
+    }
+
     if (sessionAccessLevel != "root")
     {
         if (dir == "/root" || dir.startsWith("/root/"))
@@ -220,10 +247,34 @@ void shell_ls(const String &args)
             file = root.openNextFile();
             continue;
         }
-        if (file.isDirectory())
-            shell_println_wrapped(name + " (repertoire)");
+
+        if (longFmt)
+        {
+            // Format : type+perms  owner  taille  nom
+            // ex : -rwxrwxrwx root  1024 maintenance.msh
+            String fullPath = (dir == "/") ? "/" + name : dir + "/" + name;
+            FileMeta m = get_file_meta(fullPath);
+            char typeChar = file.isDirectory() ? 'd' : '-';
+            String permsStr = String(typeChar) + m.perms;
+
+            // Propriétaire paddé à 8 chars
+            String ownerPad = m.owner;
+            while (ownerPad.length() < 8) ownerPad += ' ';
+
+            String sizeStr = file.isDirectory() ? String("      -") :
+                             String(file.size()) + String(" o");
+            // Aligner la taille à droite sur 7 chars
+            while (sizeStr.length() < 7) sizeStr = " " + sizeStr;
+
+            shell_println_wrapped(permsStr + " " + ownerPad + sizeStr + " " + name);
+        }
         else
-            shell_println_wrapped(name + " (" + file.size() + " octets)");
+        {
+            if (file.isDirectory())
+                shell_println_wrapped(name + " (repertoire)");
+            else
+                shell_println_wrapped(name + " (" + file.size() + " octets)");
+        }
         file = root.openNextFile();
     }
 }
@@ -357,7 +408,7 @@ void shell_rm(const String &args)
     }
     if (sessionAccessLevel != "root")
     {
-        if (filename == "/root" || filename.startsWith("/root/"))
+        if (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow")
         {
             shell_println_wrapped("Acces refuse");
             return;

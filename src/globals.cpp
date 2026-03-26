@@ -2,8 +2,6 @@
 
 // --- Interfaces systeme ---
 Preferences preferences;
-WiFiClientSecure client;
-HTTPClient http;
 
 // Session
 String sessionPassword = "";
@@ -14,15 +12,6 @@ String sessionAccessLevel = "user";
 bool sessionIsLoggedIn = false;
 bool permitLeftRight = true;
 
-// SSH
-String sshUser = "";
-String sshHost = "";
-String sshPassword = "";
-
-// WiFi
-String wifiSSID = "";
-String wifiPassword = "";
-
 SSHClient sshClient;
 
-String OSVersion = "1.0a";
+const char* OSVersion = "2.0";

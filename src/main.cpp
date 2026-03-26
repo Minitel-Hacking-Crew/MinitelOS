@@ -1,4 +1,6 @@
 #include "globals.h"
+#include "applications/firstboot.h"
+#include "applications/ctf/ctf_init.h"
 
 Minitel minitel(Serial2);
 
@@ -90,62 +92,46 @@ void setup()
 
   if (guideCount >= 6)
   {
-    File f = LittleFS.open("/root/.users", "w");
-    if (f)
-    {
-      // username:hashedPassword:accessLevel 
-      f.println("root:63a9f0ea7bb98050796b649e85481845:root"); //root:root
-      f.close();
-    }
-    else
-    {
-      minitel.println("Erreur creation /root/.users");
-    }
+    // Reset : supprime la base utilisateurs => force le wizard au prochain boot
+    LittleFS.remove("/etc/shadow");
+    minitel.println("Base utilisateurs supprimee.");
+    minitel.println("Redemarrage...");
+    delay(1500);
+    ESP.restart();
   }
+
+#ifdef CTF_MODE
+  ctf_fs_init();  // doit précéder is_first_boot() — crée .users et l'arborescence
+#else
+  if (is_first_boot())
+  {
+    run_first_boot_setup();
+  }
+#endif
+
   preferences.begin("MHC-OS", false);
   String savedSSID = preferences.getString("ssid");
   String savedPass = preferences.getString("pass");
+  preferences.end();
   if (!savedSSID.isEmpty() && !savedPass.isEmpty())
   {
-    minitel.println("Connexion WiFi en cours...");
-    WiFi.disconnect();
+    minitel.println("Connexion WiFi : " + savedSSID);
+    WiFi.mode(WIFI_STA);
     WiFi.begin(savedSSID.c_str(), savedPass.c_str());
-    int retryCount = 0;
     bool connected = false;
-    while (!connected && retryCount < 5)
+    for (int i = 0; i < 20 && !connected; ++i)
     {
-      unsigned long startTime = millis();
-      while (millis() - startTime < 8000)
-      {
-        if (WiFi.status() == WL_CONNECTED)
-        {
-          connected = true;
-          break;
-        }
-        minitel.print(".");
-        delay(500);
-      }
-      if (!connected)
-      {
-        retryCount++;
-        WiFi.disconnect();
-        WiFi.begin(savedSSID.c_str(), savedPass.c_str());
-      }
+      delay(500);
+      minitel.print(".");
+      if (WiFi.status() == WL_CONNECTED)
+        connected = true;
     }
-    if (connected)
-    {
-      minitel.println();
-      minitel.println("Connexion WiFi reussie");
-    }
-    else
-    {
-      minitel.println();
-      minitel.println("Connexion WiFi ignoree");
-    }
+    minitel.println();
+    minitel.println(connected ? "WiFi connecte." : "WiFi : echec de connexion.");
   }
   else
   {
-    minitel.println("Aucun WiFi enregistre, connexion ignoree.");
+    minitel.println("Aucun WiFi enregistre.");
   }
   minitel.println("Chargement des parametres OK");
   if (!LittleFS.exists("/.motd"))
@@ -161,7 +147,6 @@ void setup()
       minitel.println("Erreur lors de la creation du fichier /.motd");
     }
   }
-  preferences.end();
   minitel.println("[Minitel] Link speed : " + String(minitel.currentSpeed()));
   minitel.println("[Minitel] DeviceID : " + String(minitel.identifyDevice()));
   delay(750);

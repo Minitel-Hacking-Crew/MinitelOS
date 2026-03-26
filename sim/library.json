@@ -1,0 +1,11 @@
+{
+  "name": "MinitelOS-Sim",
+  "version": "1.0.0",
+  "description": "Native simulation layer for MinitelOS",
+  "frameworks": "native",
+  "platforms": "native",
+  "build": {
+    "srcDir": "src",
+    "includeDir": "include"
+  }
+}

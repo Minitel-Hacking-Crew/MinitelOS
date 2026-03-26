@@ -32,4 +32,9 @@ void shell_deluser(const String &);
 
 extern bool cron_paused;
 
+extern std::map<String, int> shell_int_vars;
+extern std::map<String, float> shell_float_vars;
+extern std::map<String, String> shell_string_vars;
+extern std::map<String, bool> shell_bool_vars;
+
 #endif // SHELL_SYS_H

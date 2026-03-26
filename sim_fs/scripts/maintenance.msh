@@ -1,0 +1,3 @@
+# Script de maintenance automatique v1.2
+# ATTENTION: ce script tourne en tache de fond toutes les 30s
+date >> /scripts/maintenance.log

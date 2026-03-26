@@ -3,6 +3,9 @@
 // =========================
 #include "globals.h"
 #include "shell.h"
+#include "applications/cron/cron.h"
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 #define HISTORY_SIZE 24
 std::deque<String> shell_history;
@@ -29,13 +32,9 @@ void shell_adduser(const String &);
 void shell_history_clear(const String &)
 {
     shell_history.clear();
-    save_shell_history(sessionUsername);
-    // Efface le fichier sur disque
     String histfile = "/home/" + sessionUsername + "/.msh_history";
     if (LittleFS.exists(histfile))
-    {
         LittleFS.remove(histfile);
-    }
     shell_println_wrapped("Historique de commande vide pour l'utilisateur :" + sessionUsername + " (niveau: " + sessionAccessLevel + ")");
 }
 extern void shell_motd();
@@ -50,6 +49,7 @@ ShellCommand commands[] = {
     {"clear", shell_clear_wrapper},
     {"reboot", shell_reboot_wrapper},
     {"logout", shell_logout_wrapper},
+    {"exit",   shell_logout_wrapper},
     {"version", shell_version_wrapper},
     {"ping", shell_ping},
     {"wifi", shell_wifi_wrapper},
@@ -81,6 +81,22 @@ ShellCommand commands[] = {
     {"deluser", shell_deluser},
     {"cronpause", shell_cronpause},
     {"cronresume", shell_cronresume},
+    {"touch",    shell_touch},
+    {"env",      shell_env},
+    {"export",   shell_export},
+    {"date",     shell_date},
+    {"uptime",   shell_uptime},
+    {"free",     shell_free_cmd},
+    {"ps",       shell_ps},
+    {"kill",     shell_kill_cmd},
+    {"crontab",  shell_crontab_cmd},
+    {"chmod",    shell_chmod},
+    {"chown",    shell_chown},
+    {"du",       shell_du},
+    {"nslookup", shell_nslookup},
+    {"sleep",    shell_sleep},
+    {"sudo",     shell_sudo},
+    {"ctftime",  shell_ctftime},
 };
 
 int numCommands = sizeof(commands) / sizeof(commands[0]);
@@ -107,8 +123,11 @@ String ssh_password;
 bool in_ssh_session = false;
 bool shell_break_flag = false;
 
-void write_to_file(const String &filename, const String &content, bool append)
+void write_to_file(const String &filename, const String &content, bool append, bool silent)
 {
+    // Bloquer l'écriture vers /etc/shadow depuis le contexte cron (empêche l'escalade directe)
+    if (cron_executing && filename == "/etc/shadow")
+        return;
     File file = LittleFS.open(filename, append ? FILE_APPEND : FILE_WRITE);
     if (!file)
     {
@@ -117,7 +136,8 @@ void write_to_file(const String &filename, const String &content, bool append)
     }
     file.print(content);
     file.close();
-    shell_println_wrapped(String(append ? "Ajout dans : " : "Ecrit dans : ") + filename);
+    if (!silent)
+        shell_println_wrapped(String(append ? "Ajout dans : " : "Ecrit dans : ") + filename);
 }
 
 void attendreToucheMore()
@@ -246,6 +266,8 @@ void shell_curl(const String &args)
         }
     }
 
+    WiFiClientSecure client;
+    HTTPClient http;
     client.setInsecure();
     shell_println_wrapped(String(isPost ? "POST " : "GET "));
     shell_println_wrapped(url);
@@ -276,18 +298,20 @@ void shell_curl(const String &args)
 
 void shell_ifconfig(const String &args)
 {
-    minitel.println("");
+    shell_println_wrapped("wlan0 :");
     if (WiFi.status() == WL_CONNECTED)
     {
-        shell_println_wrapped("SSID     : " + WiFi.SSID());
-        shell_println_wrapped("IP       : " + WiFi.localIP().toString());
-        shell_println_wrapped("Gateway  : " + WiFi.gatewayIP().toString());
-        shell_println_wrapped("DNS      : " + WiFi.dnsIP().toString());
-        shell_println_wrapped("MAC      : " + WiFi.macAddress());
+        shell_println_wrapped("  SSID    : " + WiFi.SSID());
+        shell_println_wrapped("  IP      : " + WiFi.localIP().toString());
+        shell_println_wrapped("  Masque  : " + WiFi.subnetMask().toString());
+        shell_println_wrapped("  Gateway : " + WiFi.gatewayIP().toString());
+        shell_println_wrapped("  DNS     : " + WiFi.dnsIP().toString());
+        shell_println_wrapped("  MAC     : " + WiFi.macAddress());
+        shell_println_wrapped("  RSSI    : " + String(WiFi.RSSI()) + " dBm");
     }
     else
     {
-        shell_println_wrapped("Non connecte au WiFi.");
+        shell_println_wrapped("  Non connecte au WiFi.");
     }
 }
 
@@ -448,7 +472,7 @@ void shell(bool skipInitScreen)
         }
 
         String prompt = "";
-        String homeDir = "/home/" + sessionUsername;
+        String homeDir = (sessionUsername == "root") ? "/root" : "/home/" + sessionUsername;
         if (shell_current_dir.startsWith(homeDir))
         {
             String subdir = shell_current_dir.substring(homeDir.length());
@@ -468,6 +492,17 @@ void shell(bool skipInitScreen)
         String cmdLine = "";
         shell_history_index = shell_history.size();
         minitel.print(prompt);
+
+        // Efface n caractères en arrière depuis la position du curseur
+        auto eraseLine = [&](int n) {
+            if (n <= 0) return;
+            minitel.moveCursorLeft(n);
+            String blanks = "";
+            for (int i = 0; i < n; i++) blanks += ' ';
+            minitel.print(blanks);
+            minitel.moveCursorLeft(n);
+        };
+
         while (true)
         {
             uint32_t k = minitel.getKeyCode(false);
@@ -486,12 +521,7 @@ void shell(bool skipInitScreen)
                 if (shell_history_index > 0 && !shell_history.empty())
                 {
                     shell_history_index--;
-                    for (int i = 0; i < cmdLine.length(); ++i)
-                    {
-                        minitel.moveCursorLeft(1);
-                        minitel.print(" ");
-                        minitel.moveCursorLeft(1);
-                    }
+                    eraseLine(cmdLine.length());
                     cmdLine = shell_history[shell_history_index];
                     minitel.print(cmdLine);
                 }
@@ -501,24 +531,14 @@ void shell(bool skipInitScreen)
                 if (shell_history_index < (int)shell_history.size() - 1)
                 {
                     shell_history_index++;
-                    for (int i = 0; i < cmdLine.length(); ++i)
-                    {
-                        minitel.moveCursorLeft(1);
-                        minitel.print(" ");
-                        minitel.moveCursorLeft(1);
-                    }
+                    eraseLine(cmdLine.length());
                     cmdLine = shell_history[shell_history_index];
                     minitel.print(cmdLine);
                 }
                 else if (shell_history_index == (int)shell_history.size() - 1)
                 {
                     shell_history_index++;
-                    for (int i = 0; i < cmdLine.length(); ++i)
-                    {
-                        minitel.moveCursorLeft(1);
-                        minitel.print(" ");
-                        minitel.moveCursorLeft(1);
-                    }
+                    eraseLine(cmdLine.length());
                     cmdLine = "";
                 }
             }
@@ -545,27 +565,26 @@ void shell(bool skipInitScreen)
             add_shell_history(sessionUsername, cmdLine);
         }
 
-        for (auto &kv : shell_int_vars)
+        // Substitution $var — longest-first pour éviter les collisions de noms
         {
-            cmdLine.replace("$" + kv.first, String(kv.second));
-        }
-        for (auto &kv : shell_float_vars)
-        {
-            char buf[16];
-            dtostrf(kv.second, 0, 2, buf);
-            cmdLine.replace("$" + kv.first, String(buf));
-        }
-        for (auto &kv : shell_string_vars)
-        {
-            cmdLine.replace("$" + kv.first, kv.second);
-        }
-        for (auto &kv : shell_bool_vars)
-        {
-            cmdLine.replace("$" + kv.first, kv.second ? "true" : "false");
-        }
-        for (auto &kv : shell_vars)
-        {
-            cmdLine.replace("$" + kv.first, kv.second);
+            std::vector<std::pair<String,String>> pairs;
+            for (auto &kv : shell_int_vars)
+                pairs.push_back({"$" + kv.first, String(kv.second)});
+            for (auto &kv : shell_float_vars) {
+                char buf[16]; dtostrf(kv.second, 0, 2, buf);
+                pairs.push_back({"$" + kv.first, String(buf)});
+            }
+            for (auto &kv : shell_string_vars)
+                pairs.push_back({"$" + kv.first, kv.second});
+            for (auto &kv : shell_bool_vars)
+                pairs.push_back({"$" + kv.first, kv.second ? "true" : "false"});
+            for (auto &kv : shell_vars)
+                pairs.push_back({"$" + kv.first, kv.second});
+            std::sort(pairs.begin(), pairs.end(),
+                [](const std::pair<String,String> &a, const std::pair<String,String> &b){
+                    return a.first.length() > b.first.length();
+                });
+            for (auto &p : pairs) cmdLine.replace(p.first, p.second);
         }
 
         if (cmdLine.length() == 0)

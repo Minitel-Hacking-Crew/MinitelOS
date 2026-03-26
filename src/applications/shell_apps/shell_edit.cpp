@@ -9,9 +9,10 @@ void shell_edit(const String &args)
         shell_println_wrapped("Usage: edit <fichier>");
         return;
     }
-    if (filename == "/root/.users")
+    if (sessionAccessLevel != "root" &&
+        (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow"))
     {
-        shell_println_wrapped("Edition du fichier /root/.users interdite.");
+        shell_println_wrapped("Acces refuse");
         return;
     }
     std::vector<String> lines;
@@ -28,7 +29,8 @@ void shell_edit(const String &args)
     bool modified = false;
     while (true)
     {
-        shell_clear();
+        minitel.clearScreen();
+        minitel.moveCursorXY(1, 1);
         minitel.println("--- mShell Edit > " + filename + " ---");
         minitel.println("");
         int start = current - 9;
@@ -37,18 +39,18 @@ void shell_edit(const String &args)
         int end = start + 20;
         if (end > (int)lines.size())
             end = lines.size();
-        minitel.moveCursorXY(0, 3);
+        minitel.moveCursorXY(1, 3);
         for (int i = start; i < end; ++i)
         {
             String prefix = (i == current) ? "> " : "  ";
             minitel.println(prefix + String(i + 1) + ": " + (i < (int)lines.size() ? lines[i] : ""));
         }
 
-        minitel.moveCursorXY(0, 23);
+        minitel.moveCursorXY(1, 23);
         minitel.println("haut/bas:prec/suiv e[x]:edit a/rc:newline x:sup g[x]:goto w:save q!:quit h:aide");
-        minitel.moveCursorXY(0, 24);
+        minitel.moveCursorXY(1, 24);
         minitel.print(String(' ', 80));
-        minitel.moveCursorXY(0, 24);
+        minitel.moveCursorXY(1, 24);
         String cmd;
         while (true)
         {
@@ -100,14 +102,14 @@ void shell_edit(const String &args)
             int idx = (editLine > 0 && editLine <= (int)lines.size()) ? (editLine - 1) : (cmd == "e" ? current : -1);
             if (idx >= 0 && idx < (int)lines.size())
             {
-                minitel.moveCursorXY(0, 24);
+                minitel.moveCursorXY(1, 24);
                 minitel.print(String(' ', 80));
-                minitel.moveCursorXY(0, 24);
+                minitel.moveCursorXY(1, 24);
                 String newLine = saisirTexte("> ", false, 128, lines[idx]);
                 int fill = 80 - newLine.length() - 2;
                 if (fill > 0)
                     minitel.print(String(' ', fill));
-                minitel.moveCursorXY(0, 24);
+                minitel.moveCursorXY(1, 24);
                 minitel.print(String(' ', 80));
                 lines[idx] = newLine;
                 modified = true;
@@ -121,14 +123,25 @@ void shell_edit(const String &args)
         else if (cmd == "b")
         {
             String newLine = saisirTexte("b: ", false, 128, "");
-            lines.insert(lines.begin() + current, newLine);
+            if (lines.empty())
+                lines.push_back(newLine);
+            else
+                lines.insert(lines.begin() + current, newLine);
             modified = true;
         }
         else if (cmd == "a" || cmd == "")
         {
             String newLine = saisirTexte("a: ", false, 128, "");
-            lines.insert(lines.begin() + current + 1, newLine);
-            current++;
+            if (lines.empty())
+            {
+                lines.push_back(newLine);
+                current = 0;
+            }
+            else
+            {
+                lines.insert(lines.begin() + current + 1, newLine);
+                current++;
+            }
             modified = true;
         }
         else if (cmd.startsWith("n"))
@@ -142,10 +155,12 @@ void shell_edit(const String &args)
                 if (v > 0)
                     offset = v;
             }
-            if (current + offset < (int)lines.size())
+            if (lines.empty())
+                current = 0;
+            else if (current + offset < (int)lines.size())
                 current += offset;
             else
-                current = lines.size() - 1;
+                current = (int)lines.size() - 1;
         }
         else if (cmd.startsWith("p"))
         {
@@ -269,7 +284,8 @@ void shell_edit(const String &args)
         }
         else if (cmd == "h")
         {
-            shell_clear();
+            minitel.clearScreen();
+            minitel.moveCursorXY(1, 1);
             minitel.println("Commandes editeur:");
             minitel.println("n[nb] : ligne suivante (+nb)");
             minitel.println("p[nb] : ligne precedente (-nb)");

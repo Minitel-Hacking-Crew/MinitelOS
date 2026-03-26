@@ -8,6 +8,7 @@
 extern bool in_ssh_session;
 extern bool shell_redirect_mode;
 bool cron_paused = false;
+bool cron_executing = false;
 extern String shell_output_buffer;
 
 std::vector<CronTask> cronTasks;
@@ -16,12 +17,14 @@ TaskHandle_t cronTaskHandle = NULL;
 void load_crontab()
 {
     cronTasks.clear();
-    File f = LittleFS.open("/root/.crontab", "r");
-    if (!f)
+    if (!LittleFS.exists("/root/.crontab"))
     {
-        minitel.println("Erreur d'ouverture du fichier de crontab.");
+        File c = LittleFS.open("/root/.crontab", "w");
+        if (c) c.close();
         return;
     }
+    File f = LittleFS.open("/root/.crontab", "r");
+    if (!f) return;
     int taskCount = 0;
     while (f.available())
     {
@@ -42,7 +45,6 @@ void load_crontab()
         }
     }
     f.close();
-    minitel.println("[CRON] " + String(taskCount) + " taches chargees.");
 }
 
 void cronTask(void *pvParameters)
@@ -56,6 +58,15 @@ void cronTask(void *pvParameters)
             {
                 if (now - task.lastRun >= task.intervalMs)
                 {
+                    // Les tâches cron s'exécutent en root
+                    String savedUser  = sessionUsername;
+                    String savedLevel = sessionAccessLevel;
+                    String savedDir   = shell_current_dir;
+                    sessionUsername    = "root";
+                    sessionAccessLevel = "root";
+                    shell_current_dir  = "/root";
+
+                    cron_executing = true;
                     bool oldRedirect = shell_redirect_mode;
                     shell_redirect_mode = true;
                     shell_output_buffer = "";
@@ -77,9 +88,15 @@ void cronTask(void *pvParameters)
                             }
                         }
                     }
+                    cron_executing = false;
                     shell_redirect_mode = oldRedirect;
                     shell_output_buffer = "";
                     task.lastRun = now;
+
+                    // Restaure la session utilisateur
+                    sessionUsername    = savedUser;
+                    sessionAccessLevel = savedLevel;
+                    shell_current_dir  = savedDir;
                 }
             }
         }

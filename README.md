@@ -1,506 +1,315 @@
-# MHC-OS - Système d'Exploitation pour ESP32 et Minitel
+# MinitelOS
 
-![Version](https://img.shields.io/badge/version-1.0a-blue)
+![Version](https://img.shields.io/badge/version-2.3-blue)
 ![Platform](https://img.shields.io/badge/platform-ESP32-green)
-![Framework](https://img.shields.io/badge/framework-Arduino-orange)
+![Framework](https://img.shields.io/badge/framework-Arduino%20%2F%20PlatformIO-orange)
 
-Statistiques PlatformIO
+Système d'exploitation Unix-like pour ESP32 + terminal Minitel 1B/2, développé par la **Minitel Hacking Crew**.
 
-<img width="356" height="161" alt="image" src="https://github.com/user-attachments/assets/e7d5be02-ca35-4fc4-a4f9-71047e82ea4f" />
+---
 
+## Description
 
-## 📖 Description
+MinitelOS transforme un ESP32 couplé à un Minitel en un vrai terminal interactif : shell complet, système de fichiers, gestion d'utilisateurs, réseau WiFi, SSH, scripting, cron, et simulateur natif pour développer sans matériel.
 
-**MHC-OS** est un système d'exploitation personnalisé développé par la **Minitel Hacking Crew** pour ESP32, spécialement conçu pour être utilisé avec un Minitel. Ce projet transforme votre ESP32 en un terminal interactif rétro avec de nombreuses fonctionnalités modernes.
+---
 
-Le système offre une interface shell complète et des outils de connectivité réseau, le tout affiché sur l'écran iconique du Minitel.
+## Démarrage rapide
 
-## ✨ Fonctionnalités principales
+### Matériel requis
+- ESP32 (devboard compatible Minitel)
+- Minitel 1B ou 2
 
-### 🖥️ Interface Shell (mShell)
-- **Shell interactif** avec invite de commandes personnalisable
-- **Système de fichiers** complet avec navigation
-- **Gestion des utilisateurs** avec authentification et niveaux de privilèges
-- **Historique des commandes** persistant
-- **Variables d'environnement** et exécution de scripts avec interpréteur
-- **Éditeur de texte** intégré avec commandes vi-like
+### Prérequis logiciel
+- [PlatformIO](https://platformio.org/) (CLI ou extension VSCode)
 
-### 🌐 Connectivité réseau
-- **Client SSH** intégré pour connexions à distance
-- **Commandes réseau** : ping, curl, ifconfig
-- **Configuration WiFi** avec connexion automatique en cas de reboot
-- **Client HTTP** pour requêtes web
-
-### 🔧 Outils système
-- **Gestionnaire de tâches CRON** pour l'automatisation
-- **Système de fichiers LittleFS** avec partitionnement
-- **Monitoring de la mémoire**
-- **Commandes de manipulation de fichiers** (ls, cat, grep, etc.)
-
-## 🛠️ Installation et configuration
-
-### Prérequis
-- **ESP32** sur une devboard compatible minitel
-- **Minitel** compatible
-- **PlatformIO** installé sur IDE (VSCode)
-
-### Dépendances
-
-Les dépendences sont intégrées au **platformio.ini**
-
-### Compilation et flash
+### Flash ESP32
 ```bash
-# Cloner le repository
-git clone <repository_url>
-
-# Compiler et flasher
-pio run -t upload
-
+pio run -t upload       # compile + flash
+pio device monitor      # moniteur série (115200 bauds)
 ```
 
-### Configuration du partitionnement
-Le projet utilise un partitionnement personnalisé défini dans `partitions.csv` :
-- **NVS** : Stockage des préférences (24 KB)
-- **PHY** : Initialisation WiFi (4 KB)
-- **APP** : Application principale (2.9 MB)
-- **SPIFFS** : Système de fichiers (1 MB)
-
-## 🎯 Utilisation
-
-### Démarrage
-1. Réglez la vitesse d'affichage série du minitel (touche Fonction + P puis 4 (pour 4800 bauds) ou 9 (9600 bauds, minitel 2 uniquement))
-2. Connectez votre ESP32 Devboard au Minitel
-3. Le splash screen MHC-OS s'affiche (sur minitel 2 il faudra effectuer la combinaison de touches Fonction + SOMMAIRE)
-4. Utilisez les touches spéciales pour la configuration initiale :
-   - **GUIDE x7** : Réinitialise les utilisateurs (conformément au users renseignés dans main.cpp)
-   - **ENVOI** : Active/désactive le déplacement curseur (incompatible avec Minitel 1B, désactivé par défaut)
-
-### Commandes principales
-
-#### Système
+### Simulateur natif (sans matériel)
 ```bash
-help              # Affiche l'aide complète
-whoami            # Utilisateur actuel
-passwd            # Changer le mot de passe
-su <user>         # Changer d'utilisateur
-login/logout      # Connexion/déconnexion
-reboot            # Redémarrage
-clear             # Efface l'écran
+pio run -e native                         # compile le simulateur
+.pio/build/native/program                 # vitesse normale
+.pio/build/native/program --baud=1200     # simulation vitesse Minitel 1B (1200 bauds)
+.pio/build/native/program --baud=4800     # simulation vitesse Minitel 2
 ```
 
-#### Fichiers et navigation
+Le simulateur monte `sim_fs/` comme système de fichiers, simule le WiFi (internet réel via libcurl), et émule le terminal Minitel dans le terminal ANSI.
+
+L'argument `--baud` (ou `-b`) ralentit l'affichage des caractères pour reproduire fidèlement la vitesse série d'un vrai Minitel. Seuls les caractères visibles sont throttlés — les séquences de contrôle (curseur, effacement) restent instantanées.
+
+---
+
+## Premier démarrage
+
+Au premier boot (ou après réinitialisation), un assistant de configuration se lance :
+
+1. **Mot de passe root** — définit le compte administrateur
+2. **Création d'utilisateur** — nom, mot de passe, niveau (user / admin)
+3. **WiFi** — scan et connexion optionnelle
+4. **MOTD** — message affiché à chaque connexion
+
+> Réinitialisation : appuyer 7× sur `CORRECTION` au démarrage (efface `/etc/shadow` et redémarre).
+
+---
+
+## Shell — Référence des commandes
+
+### Système
+| Commande | Description |
+|----------|-------------|
+| `help` | Aide complète |
+| `whoami` | Utilisateur actuel |
+| `passwd` | Changer son mot de passe |
+| `su <user>` | Changer d'utilisateur |
+| `sudo <cmd>` | Exécuter une commande en root (élévation temporaire) |
+| `adduser` | Créer un utilisateur (root) |
+| `deluser` | Supprimer un utilisateur (root) |
+| `login` / `logout` / `exit` | Connexion / déconnexion |
+| `reboot` | Redémarrer l'ESP32 |
+| `clear` | Effacer l'écran |
+| `version` | Version du système |
+| `env` | Variables d'environnement |
+| `export VAR=val` | Définir une variable |
+| `date` | Date et heure système |
+| `uptime` | Temps de fonctionnement |
+| `free` | Mémoire heap ESP32 |
+| `ps` | Processus actifs + tâches cron |
+| `kill <index>` | Supprimer une tâche cron |
+| `motd` | Afficher le message du jour (+ exécute `~/motd_perso.txt` si présent) |
+| `motd --help` | Aide détaillée sur la commande motd |
+| `motd -s <msg>` | Définir le message du jour système (root) |
+
+### Fichiers
+| Commande | Description |
+|----------|-------------|
+| `ls` | Lister le répertoire courant |
+| `ls -l` | Listing long : permissions, propriétaire, taille |
+| `cd <dir>` | Changer de répertoire |
+| `pwd` | Répertoire courant |
+| `cat <fichier>` | Afficher un fichier |
+| `edit <fichier>` | Éditeur de texte intégré |
+| `mkdir <dir>` | Créer un dossier |
+| `rm <fichier>` | Supprimer un fichier |
+| `cp <src> <dst>` | Copier |
+| `mv <src> <dst>` | Déplacer / renommer |
+| `touch <fichier>` | Créer un fichier vide |
+| `grep <motif>` | Recherche dans les fichiers |
+| `head` / `tail` | Début / fin d'un fichier |
+| `chmod <mode> <fichier>` | Changer les permissions (`644`, `rwxr-xr-x`…) |
+| `chown <user>[:<group>] <fichier>` | Changer le propriétaire |
+| `df` | Espace disque LittleFS (barre de progression) |
+| `du [path]` | Taille d'un fichier ou répertoire |
+
+
+### Réseau
+| Commande | Description |
+|----------|-------------|
+| `ifconfig` | IP, masque, gateway, DNS, MAC, RSSI |
+| `ping <host>` | Test de connectivité ICMP |
+| `nslookup <host>` | Résolution DNS |
+| `curl <url>` | Requête HTTP/HTTPS |
+| `wifi <ssid> <pass>` | Connexion WiFi |
+| `ssh <user@host>` | Client SSH |
+| `sleep <sec>` | Pause (float accepté, ex: `sleep 0.5`) |
+
+### Automatisation
+| Commande | Description |
+|----------|-------------|
+| `crontab` | Éditer les tâches cron (`/root/.crontab`) |
+| `cronpause` / `cronresume` | Suspendre / reprendre le cron |
+
+Format crontab :
+```
+# intervalle_secondes  commande
+60 echo tick
+300 curl http://exemple.fr/ping
+```
+
+---
+
+## Scripting — mShell (.msh)
+
+Exécution : `run monscript.msh`
+
+### Variables
 ```bash
-ls                # Liste les fichiers
-cd <dossier>      # Change de répertoire
-pwd               # Répertoire actuel
-cat <fichier>     # Affiche le contenu
-edit <fichier>    # Éditeur de texte
-mkdir <dossier>   # Crée un dossier
-rm <fichier>      # Supprime un fichier
-grep <motif>      # Recherche dans les fichiers
+int compteur = 0
+float temp = 20.5
+string nom = "alice"
+bool actif = true
+x = 42              # auto-typage
 ```
 
-#### Réseau
+### Arithmétique (left op right correct)
 ```bash
-wifi <ssid> <password>  # Configuration WiFi
-ping <host>             # Test de connectivité
-ssh <user@host>         # Connexion SSH
-curl <url>              # Requête HTTP
-ifconfig               # Configuration réseau
+int res = $a + $b   # avec $
+int res = a + b     # ou sans $ (rétrocompat)
+# opérateurs : + - * / %
 ```
 
-#### Applications
+### Conditions
 ```bash
-rogue             # Lance le jeu Roguelike
-ctf               # Menu des défis CTF
-ctf static        # Challenge buffer overflow
-ctf aslr          # Challenge ASLR
-ctf blind         # Challenge exploitation aveugle
+if score ge 90
+  echo excellent
+else
+  if score ge 60
+    echo bien
+  endif
+endif
+# opérateurs int : eq ne gt lt ge le
+# opérateurs string : seq sne
 ```
 
-#### Tâches automatisées
+### Boucles
 ```bash
-cronpause         # Met en pause les tâches cron
-cronresume        # Reprend les tâches cron
+for i 1 10          # for i $debut $fin aussi supporté
+  echo $i
+endfor
+
+while cnt lt 100
+  cnt = $cnt * 2
+  if cnt gt 50
+    break
+  endif
+endwhile
 ```
 
-### Éditeur de texte intégré
-L'éditeur utilise des commandes similaires à vi/ed :
-```
-n[nb]     # Ligne suivante (+nb)
-p[nb]     # Ligne précédente (-nb)
-g[nb]     # Aller à la ligne nb
-e[nb]     # Éditer la ligne nb
-a         # Ajouter après la ligne
-b         # Insérer avant la ligne
-x[nb]     # Supprimer la ligne nb
-w         # Sauvegarder
-wq        # Sauvegarder et quitter
-q!        # Quitter sans sauvegarder
+### Redirection
+```bash
+echo rapport > /root/rapport.txt
+date >> /root/rapport.txt
+cat /root/rapport.txt
 ```
 
-## 🏗️ Architecture du code
+### Fonctions
+
+Les fonctions peuvent être déclarées n'importe où dans le fichier (avant ou après leur appel).
+
+```bash
+func saluer
+    echo Bonjour $1 !
+    echo Vous avez $2 ans.
+endfunc
+
+func max
+    if $1 gt $2
+        echo $1
+    else
+        echo $2
+    endif
+endfunc
+
+call saluer Alice 30
+call max 42 17
+```
+
+**Paramètres** : disponibles en `$1`, `$2`, … `$argc` (nombre d'arguments).
+Les variables globales sont partagées avec les fonctions. `$1`…`$9` et `$argc` sont sauvegardés/restaurés automatiquement entre appels.
+
+### Mots-clés spéciaux
+- `break` — sort d'une boucle
+- `exit` — arrête le script
+- `return` — sort de la fonction courante (ne stoppe pas le script parent)
+- `read VAR` — lecture utilisateur (no-op en mode pipe)
+
+---
+
+## Architecture
 
 ```
 src/
-├── main.cpp              # Point d'entrée principal
-├── globals.h/cpp         # Variables et includes globaux
+├── main.cpp                   # Entrée ESP32
+├── native_main.cpp            # Entrée simulateur natif
+├── globals.h / globals.cpp    # État global partagé
 ├── applications/
-│   ├── shell.h/cpp       # Shell principal
-│   ├── bufferchall/      # Défis CTF
-│   ├── cron/            # Gestionnaire de tâches
-│   ├── roguelike/       # Jeu d'aventure
-│   ├── shell_apps/      # Applications shell
-│   └── ssh/             # Client SSH
-└── utils/               # Utilitaires
+│   ├── shell.h / shell.cpp    # Dispatch commandes, historique
+│   ├── firstboot.h / .cpp     # Assistant premier démarrage
+│   ├── shell_apps/
+│   │   ├── shell_sys          # Auth, users, session, help
+│   │   ├── shell_fs           # Fichiers (ls, cat, cp…)
+│   │   ├── shell_edit         # Éditeur vi-like
+│   │   ├── shell_grep         # Recherche
+│   │   ├── shell_script       # Interpréteur .msh
+│   │   └── shell_extra        # env, date, ps, sudo, df, du…
+│   ├── cron/                  # Planificateur de tâches
+│   └── ssh/                   # Client SSH (LibSSH-ESP32)
+└── utils/                     # I/O Minitel, WiFi, saisie
+
+sim/
+├── include/                   # Stubs POSIX : Arduino, LittleFS, WiFi…
+└── src/sim_impl.cpp           # Implémentation simulateur
+
+sim_fs/                        # Système de fichiers simulé (monté à la racine)
+├── etc/
+│   └── shadow                 # Base d'authentification
+├── root/
+│   ├── demo.msh               # Script de démonstration
+│   ├── test_script.msh        # Suite de tests
+│   ├── .crontab               # Tâches cron
+│   └── .fsmeta                # Permissions chmod/chown
+└── home/
 ```
 
-### Structure des applications
-- **Shell** : Interface principale avec système de commandes modulaire
-- **SSH** : Client SSH complet pour connexions distantes
-- **CRON** : Gestionnaire de tâches périodiques
+### Modèle de privilèges
+Trois niveaux : `user` → `admin` → `root`
 
-## 🔐 Système de sécurité
+- `su <user>` : switch de session permanent (demande mot de passe, sauf si déjà root)
+- `sudo <cmd>` : élévation temporaire root pour une commande ; si `sudo su <user>`, la session bascule définitivement
 
-### Gestion des utilisateurs
-- Système d'authentification par utilisateur/mot de passe
-- Niveaux d'accès différenciés (user, admin, root)
-- Stockage sécurisé des credentials
-- Sessions avec timeout automatique
+### Stockage
+| Fichier | Contenu |
+|---------|---------|
+| `/etc/shadow` | `user:MD5(pass):level` |
+| `/root/.crontab` | Tâches cron |
+| `/root/.fsmeta` | Permissions chmod/chown |
+| `/.motd` | Message du jour |
+| `/home/<user>/.msh_history` | Historique commandes |
 
-## 🎨 Interface Minitel
+---
 
-### Affichage
-- Mode texte 40x25 caractères
-- Support des caractères spéciaux Minitel
-- Interface adaptée aux limitations du terminal
-- Gestion optimisée de l'affichage
+## Ajouter une commande
 
-### Contrôles
-- Navigation avec les touches fléchées
-- Touches de fonction Minitel intégrées
-- Saisie de texte avec correction
-- Gestion des touches spéciales (ENVOI, CORRECTION, etc.)
-
-## 🔧 Configuration avancée
-
-### Variables d'environnement
-Le système supporte des variables shell persistantes :
-```bash
-set VARIABLE=valeur      # Définir une variable
-echo $VARIABLE          # Afficher une variable
-```
-
-### Scripts personnalisés
-Support de scripts avec :
-- Conditions et boucles
-- Variables locales et globales
-- Exécution en arrière-plan
-- Gestion d'erreurs
-
-### Tâches CRON
-Configuration de tâches automatisées :
-```bash
-# Format : intervalle_ms commande
-# Exemple dans le code CRON
-60000 echo "Message périodique"
-```
-
-## 🐛 Dépannage
-
-### Problèmes courants
-1. **Écran vide ou pas d'affichage** : Vérifier la vitesse de communication Minitel
-2. **Touches non reconnues** : Contrôler le mode clavier étendu
-3. **Connexion WiFi** : Vérifier les credentials et la portée
-
-### Debug
-```bash
-# Vérifier l'état système
-df                  # Espace disque
-version            # Version du système
-whoami             # Session actuelle
-```
-
-## 📝 Développement
-
-### 🔧 Ajouter une nouvelle commande simple
-
-Pour ajouter une commande basique au shell :
-
-#### 1. Déclarer la fonction
-Dans le fichier header approprié (ex: `src/applications/shell_apps/shell_sys.h`) :
+1. **Déclarer** dans le header approprié (`shell_extra.h`, `shell_sys.h`…) :
 ```cpp
 void shell_ma_commande(const String &args);
 ```
 
-#### 2. Implémenter la fonction
-Dans le fichier source correspondant (ex: `src/applications/shell_apps/shell_sys.cpp`) :
+2. **Implémenter** dans le `.cpp` correspondant :
 ```cpp
 void shell_ma_commande(const String &args) {
-    // Validation des arguments
-    if (args.length() == 0) {
-        shell_println_wrapped("Usage: ma_commande <parametre>");
-        return;
-    }
-    
-    // Logique de la commande
-    shell_println_wrapped("Résultat: " + args);
+    if (args.isEmpty()) { shell_println_wrapped("Usage: ma_commande <arg>"); return; }
+    shell_println_wrapped("Résultat : " + args);
 }
 ```
 
-#### 3. Enregistrer la commande
-Dans `src/applications/shell.cpp`, ajouter à la liste `commands[]` :
+3. **Enregistrer** dans `shell.cpp` :
 ```cpp
-ShellCommand commands[] = {
-    // ... commandes existantes ...
-    {"ma_commande", shell_ma_commande},
-};
+{"ma_commande", shell_ma_commande},
 ```
-
-#### 4. Documenter dans l'aide
-Dans `src/applications/shell_apps/shell_sys.cpp`, fonction `shell_help()` :
-```cpp
-shell_println_wrapped("  ma_commande      - Description de ma commande");
-```
-
-### 🏗️ Créer une nouvelle application complexe
-
-Pour développer une application complète :
-
-#### Structure recommandée
-```
-src/applications/mon_app/
-├── mon_app.h              # Headers et déclarations
-├── mon_app.cpp            # Logique principale
-├── mon_app_ui.cpp         # Interface utilisateur
-├── mon_app_handlers.cpp   # Gestionnaires d'événements
-└── mon_app_utils.cpp      # Utilitaires spécifiques
-```
-
-#### 1. Créer les fichiers de base
-
-**mon_app.h** :
-```cpp
-#ifndef MON_APP_H
-#define MON_APP_H
-
-#include "../globals.h"
-
-// Structures de données
-struct MonAppState {
-    int niveau;
-    bool actif;
-    String donnees;
-};
-
-// Fonctions principales
-void mon_app_init();
-void mon_app_run();
-void mon_app_cleanup();
-
-// Fonctions utilitaires
-void mon_app_afficher_interface();
-void mon_app_traiter_input(uint32_t key);
-
-// Variables globales
-extern MonAppState appState;
-
-#endif // MON_APP_H
-```
-
-**mon_app.cpp** :
-```cpp
-#include "mon_app.h"
-
-MonAppState appState = {0, false, ""};
-
-void shell_mon_app_wrapper(const String &args) {
-    mon_app_run();
-}
-
-void mon_app_init() {
-    appState.niveau = 1;
-    appState.actif = true;
-    appState.donnees = "Données initiales";
-}
-
-void mon_app_run() {
-    mon_app_init();
-    
-    // Boucle principale
-    while (appState.actif) {
-        mon_app_afficher_interface();
-        
-        uint32_t key = minitel.getKeyCode(false);
-        if (key != 0) {
-            mon_app_traiter_input(key);
-        }
-        
-        delay(50); // Éviter la surcharge CPU
-    }
-    
-    mon_app_cleanup();
-}
-
-void mon_app_cleanup() {
-    // Nettoyage et retour au shell
-    shell_clear();
-    shell_println_wrapped("Sortie de Mon App");
-}
-```
-
-**mon_app_ui.cpp** :
-```cpp
-#include "mon_app.h"
-
-void mon_app_afficher_interface() {
-    // Effacer et repositionner
-    minitel.moveCursorXY(0, 0);
-    
-    // Afficher l'interface
-    minitel.println("=== MON APPLICATION ===");
-    minitel.println("Niveau: " + String(appState.niveau));
-    minitel.println("Données: " + appState.donnees);
-    minitel.println();
-    minitel.println("[ESC] Quitter [SPACE] Action");
-    
-    // Positionner le curseur
-    minitel.moveCursorXY(0, 10);
-}
-```
-
-**mon_app_handlers.cpp** :
-```cpp
-#include "mon_app.h"
-
-void mon_app_traiter_input(uint32_t key) {
-    switch (key) {
-        case 0x1B: // ESC
-            appState.actif = false;
-            break;
-            
-        case ' ': // SPACE
-            appState.niveau++;
-            appState.donnees = "Niveau " + String(appState.niveau);
-            break;
-            
-        case 'h':
-        case 'H':
-            minitel.println("Aide: [ESC] quitter [SPACE] monter niveau");
-            break;
-            
-        default:
-            // Touche non gérée
-            break;
-    }
-}
-```
-
-#### 2. Intégrer l'application
-
-**Inclure les headers** dans `globals.h` :
-```cpp
-#include "applications/mon_app/mon_app.h"
-```
-
-**Ajouter la commande** dans `shell.cpp` :
-```cpp
-ShellCommand commands[] = {
-    // ... autres commandes ...
-    {"monapp", shell_mon_app_wrapper},
-};
-```
-
-#### 3. Gestion des ressources
-
-**Utilisation du système de fichiers** :
-```cpp
-// Sauvegarder des données
-void mon_app_sauvegarder() {
-    File file = LittleFS.open("/mon_app/config.txt", FILE_WRITE);
-    if (file) {
-        file.println("niveau=" + String(appState.niveau));
-        file.println("donnees=" + appState.donnees);
-        file.close();
-    }
-}
-
-// Charger des données
-void mon_app_charger() {
-    if (LittleFS.exists("/mon_app/config.txt")) {
-        File file = LittleFS.open("/mon_app/config.txt", FILE_READ);
-        while (file.available()) {
-            String line = file.readStringUntil('\n');
-            // Parser la ligne...
-        }
-        file.close();
-    }
-}
-```
-
-#### Gestion des touches spéciales
-```cpp
-void traiter_touches_speciales(uint32_t key) {
-    switch (key) {
-        case TOUCHE_FLECHE_HAUT:    // Navigation
-        case TOUCHE_FLECHE_BAS:
-        case TOUCHE_FLECHE_GAUCHE:
-        case TOUCHE_FLECHE_DROITE:
-            // Logique de navigation
-            break;
-            
-        case ENVOI:                 // Validation
-            // Action de validation
-            break;
-            
-        case CORRECTION:            // Annulation/Retour
-            // Action d'annulation
-            break;
-            
-        case GUIDE:                 // Aide
-            afficher_aide();
-            break;
-    }
-}
-```
-
-### 🧪 Tests et debug
-
-#### Debug de base
-```cpp
-#define DEBUG_MON_APP 1
-
-void debug_log(const String &message) {
-    #if DEBUG_MON_APP
-    Serial.println("[MON_APP] " + message);
-    #endif
-}
-```
-
-#### Tests des fonctionnalités
-```cpp
-void mon_app_test() {
-    debug_log("Test d'initialisation");
-    mon_app_init();
-    
-    debug_log("État: niveau=" + String(appState.niveau));
-    debug_log("État: actif=" + String(appState.actif));
-    
-    // Tests unitaires simples
-    assert(appState.niveau == 1);
-    assert(appState.actif == true);
-}
-```
-
-Cette structure modulaire permet de créer des applications robustes et maintenables dans l'écosystème MHC-OS.
-
-## 👥 Contributeurs
-
-- LL7Baucarre
-- 0b3ud
-
-## 📄 Licence
-
-GPL-3.0
 
 ---
+
+## Dépendances
+
+| Bibliothèque | Rôle |
+|-------------|------|
+| `Minitel1B_Hard` | Contrôle terminal Minitel (affichage, clavier) |
+| `LibSSH-ESP32` | Client SSH |
+| `ESP32Ping` | Ping ICMP |
+| `mbedTLS` | Hash MD5 (mots de passe) |
+| `libcurl` | HTTP/HTTPS (simulateur uniquement) |
+
+---
+
+## Contributeurs
+
+- LL7Baucarré
+- 0b3ud
+
+## Licence
+
+GPL-3.0
