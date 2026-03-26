@@ -3,6 +3,7 @@
 // =========================
 #include "globals.h"
 #include "shell.h"
+#include "applications/cron/cron.h"
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
@@ -124,6 +125,9 @@ bool shell_break_flag = false;
 
 void write_to_file(const String &filename, const String &content, bool append, bool silent)
 {
+    // Bloquer l'écriture vers /etc/shadow depuis le contexte cron (empêche l'escalade directe)
+    if (cron_executing && filename == "/etc/shadow")
+        return;
     File file = LittleFS.open(filename, append ? FILE_APPEND : FILE_WRITE);
     if (!file)
     {

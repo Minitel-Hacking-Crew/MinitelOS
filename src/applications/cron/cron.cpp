@@ -8,6 +8,7 @@
 extern bool in_ssh_session;
 extern bool shell_redirect_mode;
 bool cron_paused = false;
+bool cron_executing = false;
 extern String shell_output_buffer;
 
 std::vector<CronTask> cronTasks;
@@ -65,6 +66,7 @@ void cronTask(void *pvParameters)
                     sessionAccessLevel = "root";
                     shell_current_dir  = "/root";
 
+                    cron_executing = true;
                     bool oldRedirect = shell_redirect_mode;
                     shell_redirect_mode = true;
                     shell_output_buffer = "";
@@ -86,6 +88,7 @@ void cronTask(void *pvParameters)
                             }
                         }
                     }
+                    cron_executing = false;
                     shell_redirect_mode = oldRedirect;
                     shell_output_buffer = "";
                     task.lastRun = now;

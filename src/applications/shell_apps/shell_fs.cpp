@@ -1,13 +1,23 @@
 #include "globals.h"
 #include "applications/shell_apps/shell_extra.h"
+#include "applications/cron/cron.h"
 
 void shell_cat(const String &args)
 {
     String filename = shell_abspath(args);
     filename.trim();
+    // /root/ interdit même au cron (qui tourne en root) — accès interactif uniquement
+    if (filename == "/root" || filename.startsWith("/root/"))
+    {
+        if (sessionAccessLevel != "root" || cron_executing)
+        {
+            shell_println_wrapped("Acces refuse");
+            return;
+        }
+    }
     if (sessionAccessLevel != "root")
     {
-        if (filename == "/root" || filename.startsWith("/root/") || filename == "/etc/shadow")
+        if (filename == "/etc/shadow")
         {
             shell_println_wrapped("Acces refuse");
             return;

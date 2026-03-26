@@ -12,3 +12,4 @@ struct CronTask
 void load_crontab();
 void start_cronTask();
 extern std::vector<CronTask> cronTasks;
+extern bool cron_executing;  // vrai pendant l'exécution d'une tâche planifiée
