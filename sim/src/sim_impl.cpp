@@ -24,6 +24,22 @@
 #include "mbedtls/md5.h"
 
 // =============================================================================
+// Baud-rate simulation
+// =============================================================================
+static unsigned int sim_char_delay_us = 0;
+
+// Minitel uses 7E1 framing: 1 start + 7 data + 1 parity + 1 stop = 10 bits/char
+void sim_set_baud(int baud) {
+    sim_char_delay_us = (baud > 0) ? (10u * 1000000u / (unsigned)baud) : 0;
+}
+
+static inline void sim_emit(char c) {
+    fputc(c, stdout);
+    fflush(stdout);
+    if (sim_char_delay_us) usleep(sim_char_delay_us);
+}
+
+// =============================================================================
 // Global instances
 // =============================================================================
 HardwareSerial Serial;
@@ -342,15 +358,14 @@ void Minitel::attributs(byte attr) {
 }
 
 void Minitel::print(String s) {
-    fputs(s.c_str(), stdout); fflush(stdout);
+    for (size_t i = 0; i < s.length(); i++) sim_emit(s.c_str()[i]);
     _curX += (int)s.length();
     _lastChar = s.isEmpty() ? ' ' : s.c_str()[s.length()-1];
 }
 
 void Minitel::println(String s) {
-    fputs(s.c_str(), stdout);
-    fputc('\n', stdout);
-    fflush(stdout);
+    for (size_t i = 0; i < s.length(); i++) sim_emit(s.c_str()[i]);
+    fputc('\n', stdout); fflush(stdout);
     _curX = 1; _curY++;
     _lastChar = '\n';
 }
@@ -361,7 +376,7 @@ void Minitel::println() {
 }
 
 void Minitel::printChar(char c) {
-    fputc(c, stdout); fflush(stdout);
+    sim_emit(c);
     _curX++; _lastChar = c;
 }
 
@@ -378,17 +393,16 @@ void Minitel::printSpecialChar(byte b) {
         case 0x23: s = "\xc2\xa3"; break;  // pound
         default: break;
     }
-    fputs(s, stdout); fflush(stdout);
+    for (const char* p = s; *p; p++) sim_emit(*p);
     _curX++;
 }
 
-void Minitel::writeByte(byte b)        { fputc(b, stdout); fflush(stdout); }
-void Minitel::writeWord(word w)        { fputc((w>>8)&0xFF, stdout); fputc(w&0xFF, stdout); fflush(stdout); }
+void Minitel::writeByte(byte b)        { sim_emit((char)b); }
+void Minitel::writeWord(word w)        { sim_emit((char)((w>>8)&0xFF)); sim_emit((char)(w&0xFF)); }
 void Minitel::writeCode(unsigned long) {}
 
 void Minitel::repeat(int n) {
-    for (int i = 0; i < n; i++) fputc(_lastChar, stdout);
-    fflush(stdout);
+    for (int i = 0; i < n; i++) sim_emit(_lastChar);
     _curX += n;
 }
 
