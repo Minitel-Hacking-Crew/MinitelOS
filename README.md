@@ -1,6 +1,6 @@
 # MinitelOS
 
-![Version](https://img.shields.io/badge/version-2.0-blue)
+![Version](https://img.shields.io/badge/version-2.3-blue)
 ![Platform](https://img.shields.io/badge/platform-ESP32-green)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2F%20PlatformIO-orange)
 
@@ -31,11 +31,15 @@ pio device monitor      # moniteur série (115200 bauds)
 
 ### Simulateur natif (sans matériel)
 ```bash
-pio run -e native                  # compile le simulateur
-.pio/build/native/program          # lance le simulateur
+pio run -e native                         # compile le simulateur
+.pio/build/native/program                 # vitesse normale
+.pio/build/native/program --baud=1200     # simulation vitesse Minitel 1B (1200 bauds)
+.pio/build/native/program --baud=4800     # simulation vitesse Minitel 2
 ```
 
 Le simulateur monte `sim_fs/` comme système de fichiers, simule le WiFi (internet réel via libcurl), et émule le terminal Minitel dans le terminal ANSI.
+
+L'argument `--baud` (ou `-b`) ralentit l'affichage des caractères pour reproduire fidèlement la vitesse série d'un vrai Minitel. Seuls les caractères visibles sont throttlés — les séquences de contrôle (curseur, effacement) restent instantanées.
 
 ---
 
@@ -83,6 +87,7 @@ Au premier boot (ou après réinitialisation), un assistant de configuration se 
 | Commande | Description |
 |----------|-------------|
 | `ls` | Lister le répertoire courant |
+| `ls -l` | Listing long : permissions, propriétaire, taille |
 | `cd <dir>` | Changer de répertoire |
 | `pwd` | Répertoire courant |
 | `cat <fichier>` | Afficher un fichier |
@@ -180,9 +185,35 @@ date >> /root/rapport.txt
 cat /root/rapport.txt
 ```
 
+### Fonctions
+
+Les fonctions peuvent être déclarées n'importe où dans le fichier (avant ou après leur appel).
+
+```bash
+func saluer
+    echo Bonjour $1 !
+    echo Vous avez $2 ans.
+endfunc
+
+func max
+    if $1 gt $2
+        echo $1
+    else
+        echo $2
+    endif
+endfunc
+
+call saluer Alice 30
+call max 42 17
+```
+
+**Paramètres** : disponibles en `$1`, `$2`, … `$argc` (nombre d'arguments).
+Les variables globales sont partagées avec les fonctions. `$1`…`$9` et `$argc` sont sauvegardés/restaurés automatiquement entre appels.
+
 ### Mots-clés spéciaux
 - `break` — sort d'une boucle
 - `exit` — arrête le script
+- `return` — sort de la fonction courante (ne stoppe pas le script parent)
 - `read VAR` — lecture utilisateur (no-op en mode pipe)
 
 ---

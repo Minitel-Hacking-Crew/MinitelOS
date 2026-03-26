@@ -18,7 +18,11 @@ extern String shell_current_dir;
 extern ShellCommand commands[];
 
 // Script-level exit flag — stops entire script; reset on each shell_run call.
-static bool shell_exit_flag = false;
+static bool shell_exit_flag   = false;
+// Return flag — set by "return" inside a function; cleared by the call handler.
+static bool shell_return_flag = false;
+// Function registry — populated by the first pass of shell_run.
+static std::map<String, std::vector<String>> shell_script_funcs;
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 float round2(float val) { return roundf(val * 100.0f) / 100.0f; }
@@ -291,11 +295,90 @@ bool shell_process_line(const String &line) {
 
 // ─── Block executor (handles all control structures recursively) ───────────────
 void shell_execute_block(const std::vector<String> &block) {
-    for (size_t i = 0; i < block.size() && !shell_break_flag && !shell_exit_flag; ++i) {
+    for (size_t i = 0; i < block.size() && !shell_break_flag && !shell_exit_flag && !shell_return_flag; ++i) {
         String line = block[i]; line.trim();
         if (line.length() == 0 || line.startsWith("#")) continue;
-        if (line == "break") { shell_break_flag = true; return; }
-        if (line == "exit")  { shell_exit_flag  = true; return; }
+        if (line == "break")  { shell_break_flag  = true; return; }
+        if (line == "exit")   { shell_exit_flag   = true; return; }
+        if (line == "return") { shell_return_flag = true; return; }
+
+        // ── func <name> / endfunc — skip at runtime (collected by first pass) ─
+        if (line.startsWith("func ")) {
+            int depth = 1;
+            while (++i < block.size()) {
+                String bl = block[i]; bl.trim();
+                if (bl.startsWith("func ")) depth++;
+                if (bl == "endfunc" && --depth == 0) break;
+            }
+            continue;
+        }
+
+        // ── call <funcname> [arg1 arg2 ...] ───────────────────────────────────
+        if (line.startsWith("call ")) {
+            String rest = subst_vars(line.substring(5)); rest.trim();
+            int sp = rest.indexOf(' ');
+            String fname  = (sp == -1) ? rest : rest.substring(0, sp);
+            String argstr = (sp == -1) ? String("") : rest.substring(sp + 1);
+            argstr.trim();
+
+            if (!shell_script_funcs.count(fname)) {
+                shell_println_wrapped("Fonction inconnue : " + fname);
+                continue;
+            }
+
+            // Parse args (basic quote support)
+            std::vector<String> call_args;
+            String cur = "";
+            bool inQ = false;
+            for (int ci = 0; ci < (int)argstr.length(); ++ci) {
+                char c = argstr[ci];
+                if (c == '"') { inQ = !inQ; continue; }
+                if (c == ' ' && !inQ) {
+                    if (cur.length() > 0) { call_args.push_back(cur); cur = ""; }
+                } else {
+                    cur += c;
+                }
+            }
+            if (cur.length() > 0) call_args.push_back(cur);
+
+            // Save $1..$9 and $argc from outer scope
+            std::map<String, int>    savedArgInt;
+            std::map<String, String> savedArgStr;
+            for (int j = 1; j <= 9; ++j) {
+                String k = String(j);
+                if (shell_int_vars.count(k))    savedArgInt[k] = shell_int_vars.at(k);
+                if (shell_string_vars.count(k)) savedArgStr[k] = shell_string_vars.at(k);
+            }
+            if (shell_int_vars.count("argc")) savedArgInt["argc"] = shell_int_vars.at("argc");
+
+            // Set $argc and $1..$N for this call
+            shell_int_vars["argc"] = (int)call_args.size();
+            for (int j = 0; j < (int)call_args.size(); ++j) {
+                String k = String(j + 1);
+                String a = call_args[j];
+                bool isNum = a.length() > 0 &&
+                    (isdigit((unsigned char)a[0]) ||
+                     (a[0] == '-' && a.length() > 1 && isdigit((unsigned char)a[1])));
+                shell_string_vars.erase(k);
+                shell_int_vars.erase(k);
+                if (isNum) shell_int_vars[k]    = a.toInt();
+                else       shell_string_vars[k] = a;
+            }
+
+            shell_execute_block(shell_script_funcs.at(fname));
+            shell_return_flag = false;  // "return" stops the function, not the caller
+
+            // Restore $1..$9 and $argc
+            for (int j = 1; j <= (int)call_args.size(); ++j) {
+                String k = String(j);
+                shell_int_vars.erase(k);
+                shell_string_vars.erase(k);
+            }
+            shell_int_vars.erase("argc");
+            for (auto &kv : savedArgInt) shell_int_vars[kv.first]    = kv.second;
+            for (auto &kv : savedArgStr) shell_string_vars[kv.first] = kv.second;
+            continue;
+        }
 
         // ── for <var> <start> <end> / endfor ──────────────────────────────────
         if (line.startsWith("for ")) {
@@ -316,7 +399,7 @@ void shell_execute_block(const std::vector<String> &block) {
                 if (bl.startsWith("endfor")) { if (--depth == 0) break; }
                 if (depth > 0) forBlock.push_back(bl);
             }
-            for (int j = forStart; j <= forEnd && !shell_exit_flag; ++j) {
+            for (int j = forStart; j <= forEnd && !shell_exit_flag && !shell_return_flag; ++j) {
                 shell_int_vars[forVar] = j;
                 shell_execute_block(forBlock);
                 if (shell_break_flag) break;
@@ -336,7 +419,7 @@ void shell_execute_block(const std::vector<String> &block) {
                 if (bl.startsWith("endwhile")) { if (--depth == 0) break; }
                 if (depth > 0) whileBlock.push_back(bl);
             }
-            while (eval_condition(cond) && !shell_exit_flag) {
+            while (eval_condition(cond) && !shell_exit_flag && !shell_return_flag) {
                 shell_execute_block(whileBlock);
                 if (shell_break_flag) break;
             }
@@ -379,15 +462,40 @@ void shell_run(const String &args) {
     if (!file) {
         shell_println_wrapped("Erreur ouverture : " + filename); return;
     }
-    std::vector<String> lines;
+    std::vector<String> raw;
     while (file.available()) {
         String l = file.readStringUntil('\n'); l.trim();
-        lines.push_back(l);
+        raw.push_back(l);
     }
     file.close();
-    shell_exit_flag  = false;
-    shell_break_flag = false;
+
+    // ── First pass: collect func definitions (functions usable before definition)
+    shell_script_funcs.clear();
+    std::vector<String> lines;
+    for (size_t i = 0; i < raw.size(); ++i) {
+        String l = raw[i]; l.trim();
+        if (l.startsWith("func ")) {
+            String fname = l.substring(5); fname.trim();
+            std::vector<String> fbody;
+            int depth = 1;
+            while (++i < raw.size()) {
+                String bl = raw[i]; bl.trim();
+                if (bl.startsWith("func ")) depth++;
+                if (bl == "endfunc" && --depth == 0) break;
+                if (depth > 0) fbody.push_back(bl);
+            }
+            shell_script_funcs[fname] = fbody;
+        } else {
+            lines.push_back(raw[i]);
+        }
+    }
+
+    shell_exit_flag   = false;
+    shell_break_flag  = false;
+    shell_return_flag = false;
     shell_execute_block(lines);
-    shell_exit_flag  = false;
-    shell_break_flag = false;
+    shell_exit_flag   = false;
+    shell_break_flag  = false;
+    shell_return_flag = false;
+    shell_script_funcs.clear();
 }
