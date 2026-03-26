@@ -9,9 +9,10 @@ void shell_edit(const String &args)
         shell_println_wrapped("Usage: edit <fichier>");
         return;
     }
-    if (filename == "/root/.users")
+    if (sessionAccessLevel != "root" &&
+        (filename == "/root" || filename.startsWith("/root/")))
     {
-        shell_println_wrapped("Edition du fichier /root/.users interdite.");
+        shell_println_wrapped("Acces refuse");
         return;
     }
     std::vector<String> lines;

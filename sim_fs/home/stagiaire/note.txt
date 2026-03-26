@@ -1,5 +1,4 @@
 TODO perso :
-- demander a l'admin de desactiver le script de
-  maintenance apres l'incident de janvier
-  (droits mal configures sur /tmp/maintenance.msh)
+- demander a l'admin de corriger les droits sur
+  /scripts/maintenance.msh (incident de janvier)
 - voir pourquoi le cron tourne encore en root

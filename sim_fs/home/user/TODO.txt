@@ -1,3 +1,2 @@
-- rappeler l'admin de supprimer le backup dans /tmp
-  (comptes exportes pour la migration, jamais effaces)
-- changer mon mot de passe (trop simple)
+- effacer backup.bak (migration terminee depuis longtemps)
+- changer mon mot de passe

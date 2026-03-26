@@ -2,7 +2,6 @@ Memo perso admin - CONFIDENTIEL
 
 Compte : admin / minitel (a changer ASAP !)
 
-Note de service : le systeme de motd personnalise
-a ete active pour les comptes utilisateurs afin
-d'afficher des informations dynamiques au login.
-Voir README dans le repertoire home pour details.
+Note : le systeme de motd personnalise a ete active
+pour afficher des informations dynamiques au login.
+Voir README.txt pour les details d'utilisation.
