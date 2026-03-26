@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "applications/firstboot.h"
+#include "applications/ctf/ctf_init.h"
 
 Minitel minitel(Serial2);
 
@@ -99,10 +100,14 @@ void setup()
     ESP.restart();
   }
 
+#ifdef CTF_MODE
+  ctf_fs_init();  // doit précéder is_first_boot() — crée .users et l'arborescence
+#else
   if (is_first_boot())
   {
     run_first_boot_setup();
   }
+#endif
 
   preferences.begin("MHC-OS", false);
   String savedSSID = preferences.getString("ssid");
