@@ -27,19 +27,18 @@ static void ctf_remove(const char *path) {
 // ---------------------------------------------------------------------------
 // CTF filesystem init
 //
-// Chaîne stricte (chaque pivot n'est accessible qu'en ayant fait le précédent) :
+// Chaîne :  stagiaire/1234 ──[C1 cron]──► admin/minitel ──[C2 flag]──[C3 motd]──► FLAG root
 //
-//   stagiaire/1234 ──[C1 cron]──► user/linux ──[C2 backup]──► admin/minitel ──[C3 motd]──► FLAG3
+//   C1 (pas de flag) :
+//     inject /scripts/maintenance.msh → cron (root) écrit /root/.users dans /tmp/loot.txt
+//     → hash root = incrackable (mot de passe aléatoire)
+//     → hash admin = crackable via wordlist (minitel)
+//     → hash stagiaire = connu (1234)
+//     → su admin
 //
-//   C1 : inject maintenance.msh → cron (root) écrit flag1 + hash user dans /tmp/loot.txt
-//         → /root/.ctf_pivot1 (root-only) contient le hash user
-//         → stagiaire ne peut PAS le lire directement
+//   C2 : cat /home/admin/flag2.txt  → FLAG{4dm1n_4cc3ss}
 //
-//   C2 : /home/user/backup.bak (user-only) contient le hash admin
-//         → stagiaire ne peut PAS lire /home/user/
-//
-//   C3 : /home/admin/motd_perso.txt exécuté en root via motd
-//         → admin ne connaît pas le mot de passe root
+//   C3 : edit motd_perso.txt → motd exécute en root → FLAG{r00t_m0td_pwn3d}
 // ---------------------------------------------------------------------------
 
 void ctf_fs_init() {
@@ -50,31 +49,20 @@ void ctf_fs_init() {
     ctf_mkdir("/tmp");
     ctf_mkdir("/scripts");
     ctf_mkdir("/home/stagiaire");
-    ctf_mkdir("/home/user");
     ctf_mkdir("/home/admin");
 
     // ── Comptes utilisateurs ─────────────────────────────────────────────────
     // Passwords (MD5) :
-    //   root      = T3lm1n1  → 06698cd46a5585ec7a10f99d74d675fd
-    //   stagiaire = 1234     → 81dc9bdb52d04dc20036dbd8313ed055 (sur fiche)
-    //   user      = linux    → e206a54e97690cce50cc872dd70ee896 (C1 → /tmp/loot.txt)
-    //   admin     = minitel  → bb3c3e98175d33c8300fbb0e84bf9e9f (C2 → /home/user/backup.bak)
+    //   root      = V1Oz5Re8G41EVmqWXl76 → 2260a49226afcd3bb784cb3e3888ea91 (INCRACKABLE)
+    //   stagiaire = 1234                 → 81dc9bdb52d04dc20036dbd8313ed055 (donné sur fiche)
+    //   admin     = minitel              → bb3c3e98175d33c8300fbb0e84bf9e9f (crackable via C1)
     ctf_write("/root/.users",
-        "root:06698cd46a5585ec7a10f99d74d675fd:root\n"
+        "root:2260a49226afcd3bb784cb3e3888ea91:root\n"
         "stagiaire:81dc9bdb52d04dc20036dbd8313ed055:user\n"
-        "user:e206a54e97690cce50cc872dd70ee896:user\n"
         "admin:bb3c3e98175d33c8300fbb0e84bf9e9f:admin\n");
 
-    // ── Pivot C1 → C2 : hash user (root-only, extrait via cron) ─────────────
-    // La cron injection attendue :
-    //   cat /root/flag1.txt > /tmp/loot.txt
-    //   cat /root/.ctf_pivot1 >> /tmp/loot.txt
-    // → /tmp/loot.txt contiendra flag1 puis "user:<hash>:user"
-    ctf_write("/root/.ctf_pivot1",
-        "user:e206a54e97690cce50cc872dd70ee896:user\n");
-
     // ── Flags ────────────────────────────────────────────────────────────────
-    ctf_write("/root/flag1.txt",       "FLAG{cr0n_2_p1v0t}\n");
+    // Pas de flag1 — C1 est uniquement un pivot
     ctf_write("/home/admin/flag2.txt", "FLAG{4dm1n_4cc3ss}\n");
     ctf_write("/root/flag3.txt",       "FLAG{r00t_m0td_pwn3d}\n");
 
@@ -89,19 +77,18 @@ void ctf_fs_init() {
 
     // ── Métadonnées de permissions ────────────────────────────────────────────
     ctf_write("/root/.fsmeta",
-        "/scripts/maintenance.msh rwxrwxrwx root root\n"
-        "/scripts/maintenance.log rw-rw-rw- root root\n"
-        "/root/flag1.txt         rw------- root root\n"
-        "/root/flag3.txt         rw------- root root\n"
-        "/root/.ctf_pivot1       rw------- root root\n"
-        "/home/admin/flag2.txt   rw-r----- admin admin\n"
-        "/home/user/backup.bak   rw-r----- user  user\n");
+        "/scripts/maintenance.msh rwxrwxrwx root  root\n"
+        "/scripts/maintenance.log rw-rw-rw- root  root\n"
+        "/root/.users             rw------- root  root\n"
+        "/root/flag3.txt          rw------- root  root\n"
+        "/home/admin/flag2.txt    rw-r----- admin admin\n");
 
-    // ── Challenge 1 — Backdoor Cron (stagiaire → user) ───────────────────────
+    // ── Challenge 1 — Backdoor Cron (stagiaire → admin) ──────────────────────
     // /scripts/maintenance.msh world-writable, exécuté par root toutes les 30s
-    // Injection attendue (2 lignes via edit) :
-    //   cat /root/flag1.txt > /tmp/loot.txt
-    //   cat /root/.ctf_pivot1 >> /tmp/loot.txt
+    // Injection attendue (1 ligne via edit) :
+    //   cat /root/.users > /tmp/loot.txt
+    // → /tmp/loot.txt contient les 3 hashes
+    // → hash root incrackable, hash admin crackable (minitel), hash stagiaire connu
     ctf_write("/scripts/maintenance.msh",
         "# Script de maintenance automatique v1.2\n"
         "# ATTENTION: ce script tourne en tache de fond toutes les 30s\n"
@@ -121,16 +108,7 @@ void ctf_fs_init() {
         "  /scripts/maintenance.msh (incident de janvier)\n"
         "- voir pourquoi le cron tourne encore en root\n");
 
-    // ── Challenge 2 — Backup Oublié (user → admin) ───────────────────────────
-    // /home/user/backup.bak readable uniquement en tant que user
-    // (stagiaire bloqué par l'access control /home/<other>/)
-    ctf_write("/home/user/backup.bak",
-        "admin:bb3c3e98175d33c8300fbb0e84bf9e9f:admin\n");
-
-    ctf_write("/home/user/TODO.txt",
-        "- effacer backup.bak (migration terminee depuis longtemps)\n"
-        "- changer mon mot de passe\n");
-
+    // ── Challenge 2 — Flag admin ──────────────────────────────────────────────
     ctf_write("/home/admin/notes_perso.txt",
         "Memo perso admin - CONFIDENTIEL\n\n"
         "Compte : admin / minitel (a changer ASAP !)\n\n"
@@ -158,12 +136,11 @@ void ctf_fs_init() {
         "MINITEL SECURITE INDUSTRIELLE v2.3\n"
         "Acces restreint - personnel autorise uniquement\n"
         "Tapez 'ctftime' pour voir le temps restant\n"
-        "Objectif : obtenez les 3 flags et soumettez-les\n");
+        "Objectif : obtenez les 2 flags et soumettez-les\n");
 
     // ── Nettoyage des artefacts des sessions précédentes ─────────────────────
     ctf_remove("/tmp/loot.txt");
     ctf_remove("/tmp/pwned.txt");
-    ctf_remove("/home/user/motd_perso.txt");
     ctf_remove("/home/admin/motd_perso.txt");
 }
 

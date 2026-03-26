@@ -1,2 +1,0 @@
-- effacer backup.bak (migration terminee depuis longtemps)
-- changer mon mot de passe
