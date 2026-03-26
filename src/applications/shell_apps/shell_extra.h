@@ -3,6 +3,9 @@
 
 #include "globals.h"
 
+struct FileMeta { String perms; String owner; String group; };
+FileMeta get_file_meta(const String &path);
+
 void shell_touch(const String &args);
 void shell_env(const String &args);
 void shell_export(const String &args);

@@ -20,8 +20,6 @@ extern TaskHandle_t cronTaskHandle;
 
 static const char *META_FILE = "/root/.fsmeta";
 
-struct FileMeta { String perms; String owner; String group; };
-
 static FileMeta read_meta(const String &path) {
     FileMeta m{"rw-r--r--", "root", "root"};
     if (!LittleFS.exists(META_FILE)) return m;
@@ -44,6 +42,8 @@ static FileMeta read_meta(const String &path) {
     f.close();
     return m;
 }
+
+FileMeta get_file_meta(const String &path) { return read_meta(path); }
 
 static void write_meta(const String &path, const String &perms,
                         const String &owner, const String &group) {

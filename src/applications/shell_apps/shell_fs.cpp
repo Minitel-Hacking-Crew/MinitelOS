@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "applications/shell_apps/shell_extra.h"
 
 void shell_cat(const String &args)
 {
@@ -184,6 +185,8 @@ void shell_ls(const String &args)
 {
     String dir = shell_current_dir;
     bool showHidden = args.indexOf("-h") != -1;
+    bool longFmt    = args.indexOf("-l") != -1;
+
     if (sessionAccessLevel != "root")
     {
         if (dir == "/root" || dir.startsWith("/root/"))
@@ -220,10 +223,34 @@ void shell_ls(const String &args)
             file = root.openNextFile();
             continue;
         }
-        if (file.isDirectory())
-            shell_println_wrapped(name + " (repertoire)");
+
+        if (longFmt)
+        {
+            // Format : type+perms  owner  taille  nom
+            // ex : -rwxrwxrwx root  1024 maintenance.msh
+            String fullPath = (dir == "/") ? "/" + name : dir + "/" + name;
+            FileMeta m = get_file_meta(fullPath);
+            char typeChar = file.isDirectory() ? 'd' : '-';
+            String permsStr = String(typeChar) + m.perms;
+
+            // Propriétaire paddé à 8 chars
+            String ownerPad = m.owner;
+            while (ownerPad.length() < 8) ownerPad += ' ';
+
+            String sizeStr = file.isDirectory() ? String("      -") :
+                             String(file.size()) + String(" o");
+            // Aligner la taille à droite sur 7 chars
+            while (sizeStr.length() < 7) sizeStr = " " + sizeStr;
+
+            shell_println_wrapped(permsStr + " " + ownerPad + sizeStr + " " + name);
+        }
         else
-            shell_println_wrapped(name + " (" + file.size() + " octets)");
+        {
+            if (file.isDirectory())
+                shell_println_wrapped(name + " (repertoire)");
+            else
+                shell_println_wrapped(name + " (" + file.size() + " octets)");
+        }
         file = root.openNextFile();
     }
 }
