@@ -127,12 +127,13 @@ date
 |----------|-------------|
 | `crontab` | Éditer les tâches cron (`/root/.crontab`) |
 | `cronpause` / `cronresume` | Suspendre / reprendre le cron |
+| `ctftime` | Affiche le temps restant CTF (reset auto si expiré) |
 
 Format crontab :
 ```
-# intervalle_ms  commande
-60000 echo tick
-300000 curl http://exemple.fr/ping
+# intervalle_secondes  commande
+30 run /scripts/maintenance.msh
+60 echo tick
 ```
 
 ---
@@ -198,6 +199,49 @@ cat /root/rapport.txt
 
 ---
 
+## Mode CTF
+
+Le mode CTF est activé à la compilation avec `CTF_MODE` (défini dans `platformio.ini` pour `env:native` et `env:MinitelOS`).
+
+### Déploiement
+
+```bash
+# Simulateur natif
+git checkout ctf/scenario-3-backdoor-cron
+pio run -e native
+.pio/build/native/program
+
+# ESP32
+pio run -e MinitelOS -t upload
+pio run -e MinitelOS -t uploadfs   # première fois
+pio device monitor
+```
+
+À chaque boot, `ctf_fs_init()` recrée entièrement l'environnement (arborescence, comptes, flags, scripts) — il n'y a rien à réinitialiser manuellement entre les équipes.
+
+### Timer et reset
+
+```bash
+ctftime   # affiche le temps écoulé / restant sur 15 min
+```
+
+Quand le temps est écoulé, `ctftime` :
+1. Affiche `!!! TEMPS ECOULE — Reinitialisation en cours... !!!`
+2. Réinitialise le filesystem CTF (`ctf_fs_init()`)
+3. Déconnecte la session courante → retour à l'écran de login
+
+Durée configurable dans `/root/.ctf_config` (valeur en secondes, défaut : `900` = 15 min).
+
+### Chaîne d'exploitation
+
+```
+stagiaire/1234 ──[cron injection]──► admin/minitel ──[motd backdoor]──► root shell
+```
+
+Voir [docs/CTF_CHALLENGES.md](docs/CTF_CHALLENGES.md) pour le rapport de compromission complet.
+
+---
+
 ## Architecture
 
 ```
@@ -224,10 +268,18 @@ sim/
 └── src/sim_impl.cpp           # Implémentation simulateur
 
 sim_fs/                        # Système de fichiers simulé (monté à la racine)
+├── etc/
+│   └── shadow                 # Auth système (world-readable en CTF_MODE)
 ├── root/
 │   ├── demo.msh               # Script de démonstration
-│   └── test_script.msh        # Suite de tests
+│   ├── test_script.msh        # Suite de tests
+│   ├── .crontab               # Tâches cron
+│   ├── .fsmeta                # Permissions chmod/chown
+│   └── root.txt               # FLAG 2 (CTF)
 └── home/
+    ├── stagiaire/             # Foothold CTF
+    └── admin/
+        └── user.txt           # FLAG 1 (CTF)
 ```
 
 ### Modèle de privilèges

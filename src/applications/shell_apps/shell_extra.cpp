@@ -1,6 +1,9 @@
 #include "shell_extra.h"
 #include "applications/shell_apps/shell_edit.h"
 #include "applications/cron/cron.h"
+#ifdef CTF_MODE
+#include "applications/ctf/ctf_init.h"
+#endif
 #include <ctime>
 #include <mbedtls/md5.h>
 
@@ -14,6 +17,7 @@ extern std::map<String, float> shell_float_vars;
 extern std::map<String, String> shell_string_vars;
 extern std::map<String, bool> shell_bool_vars;
 extern TaskHandle_t cronTaskHandle;
+extern void shell_logout();
 
 // ─── helpers metadata ────────────────────────────────────────────────────────
 // Format /root/.fsmeta : une entrée par ligne  "<path> <perms> <owner> <group>"
@@ -409,5 +413,12 @@ void shell_ctftime(const String &) {
     for (int i = 0; i < 20; i++) bar += (i < pct / 5) ? '#' : '.';
     bar += "] " + String(pct) + "%";
     shell_println_wrapped(bar);
-    if (remain_s == 0) shell_println_wrapped("!!! TEMPS ECOULE !!!");
+    if (remain_s == 0) {
+        shell_println_wrapped("!!! TEMPS ECOULE — Reinitialisation en cours... !!!");
+#ifdef CTF_MODE
+        delay(2000);
+        ctf_fs_init();
+#endif
+        shell_logout();
+    }
 }
