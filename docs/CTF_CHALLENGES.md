@@ -5,16 +5,107 @@ Chaque challenge est indépendant. Les participants reçoivent une **fiche papie
 
 ---
 
+## Prérequis
+
+- [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/) (`pip install platformio`)
+- Branche : `ctf/scenario-3-backdoor-cron`
+
+```bash
+git clone <repo>
+cd MinitelOS
+git checkout ctf/scenario-3-backdoor-cron
+```
+
+---
+
+## Build & lancement
+
+### Simulateur natif (poste organisateur / démo)
+
+```bash
+# Compiler
+pio run -e native
+
+# Lancer (CTF_MODE actif : reset automatique au démarrage)
+.pio/build/native/program
+```
+
+### ESP32 (Minitel physique)
+
+```bash
+# Compiler et flasher le firmware
+pio run -e MinitelOS -t upload
+
+# Flasher le filesystem initial (première fois seulement)
+pio run -e MinitelOS -t uploadfs
+
+# Monitor série (debug)
+pio device monitor
+```
+
+> `CTF_MODE` est activé dans les deux envs par défaut (`platformio.ini`).
+> Au boot, tous les fichiers CTF sont recréés et les artefacts des sessions précédentes supprimés.
+
+---
+
+## Reset entre équipes
+
+### Simulateur
+
+```bash
+# Option A — reset complet (recommandé)
+rm -rf sim_fs/ && .pio/build/native/program
+
+# Option B — reset partiel (plus rapide, conserve l'arborescence)
+git checkout -- sim_fs/
+rm -f sim_fs/tmp/loot.txt sim_fs/tmp/d_flag.txt sim_fs/home/user/motd_perso.txt
+.pio/build/native/program
+```
+
+> Les deux options sont équivalentes : `CTF_MODE` recrée tout au démarrage.
+
+### ESP32
+
+```bash
+# Simple reboot (CTF_MODE recrée tout au démarrage)
+# Via bouton RESET de la carte, ou :
+pio run -e MinitelOS -t upload   # reflash complet si nécessaire
+```
+
+---
+
+## Configuration
+
+| Paramètre | Emplacement | Valeur par défaut |
+|-----------|-------------|-------------------|
+| Durée CTF | `sim_fs/root/.ctf_config` | `720` (12 min) |
+| Intervalle cron | `sim_fs/root/.crontab` | `30` (secondes) |
+| Activer CTF_MODE | `platformio.ini` → `build_flags` | `-D CTF_MODE` |
+
+**Ajuster la durée** (ex. 10 min) :
+```bash
+echo "600" > sim_fs/root/.ctf_config
+```
+
+**Accélérer le cron pour démo** (5s au lieu de 30s) :
+```bash
+# Éditer sim_fs/root/.crontab, remplacer 30 par 5
+```
+
+**Désactiver CTF_MODE** (build MinitelOS standard) :
+```bash
+# Dans platformio.ini, retirer -D CTF_MODE des build_flags
+```
+
+---
+
 ## Informations communes
 
 | Élément | Valeur |
 |---------|--------|
-| Simulateur | `pio run -e native && .pio/build/native/program` |
 | Branche git | `ctf/scenario-3-backdoor-cron` |
-| Timer | `ctftime` — durée configurable dans `/root/.ctf_config` (en secondes, défaut 720s) |
+| Timer | commande `ctftime` — durée dans `/root/.ctf_config` |
 | Soumission | Flag à rentrer sur la plateforme web CTF |
-
-**Reset entre équipes** : restaurer `sim_fs/` depuis git (`git checkout -- sim_fs/`), relancer le binaire.
 
 ---
 
