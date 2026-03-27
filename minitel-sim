@@ -7,19 +7,22 @@
 # Options:
 #   -b, --baud <rate>   Vitesse simulée en bauds (1200, 2400, 4800, 9600)
 #       --baud=<rate>   Même effet
+#       --standard      Mode sans CTF (env native-standard)
 #       --reset         Réinitialise les fichiers de session (groupes, sudoers, fsmeta)
 #       --build         Force un rebuild complet avant le lancement
 #   -h, --help          Affiche cette aide
 #
 # Exemples:
-#   ./minitel-sim                   Lancement rapide (build auto si absent)
-#   ./minitel-sim --baud=1200       Simule une connexion à 1200 bauds
-#   ./minitel-sim --reset --build   Reset + rebuild propre
+#   ./minitel-sim                    Lancement CTF (build auto si absent)
+#   ./minitel-sim --standard         Lancement sans CTF
+#   ./minitel-sim --baud=1200        Simule une connexion à 1200 bauds
+#   ./minitel-sim --reset --build    Reset + rebuild propre
 
 set -euo pipefail
 
-BINARY=".pio/build/native/program"
 SIM_FS="sim_fs"
+ENV="native"
+BINARY=".pio/build/native/program"
 
 print_help() {
     grep '^#' "$0" | sed 's/^# \?//'
@@ -27,8 +30,8 @@ print_help() {
 }
 
 rebuild() {
-    echo "[sim] Build en cours (pio run -e native)..."
-    pio run -e native
+    echo "[sim] Build en cours (pio run -e ${ENV})..."
+    pio run -e "${ENV}"
 }
 
 reset_fs() {
@@ -45,14 +48,14 @@ FORWARD_ARGS=()
 
 for arg in "$@"; do
     case "$arg" in
-        --help|-h) print_help ;;
-        --build)   FORCE_BUILD=true ;;
-        --reset)   reset_fs ;;
-        *)         FORWARD_ARGS+=("$arg") ;;
+        --help|-h)   print_help ;;
+        --build)     FORCE_BUILD=true ;;
+        --reset)     reset_fs ;;
+        --standard)  ENV="native-standard"; BINARY=".pio/build/native-standard/program" ;;
+        *)           FORWARD_ARGS+=("$arg") ;;
     esac
 done
 
-# Build automatique si binaire absent ou --build demandé
 if [ ! -f "$BINARY" ] || [ "$FORCE_BUILD" = true ]; then
     if ! command -v pio &>/dev/null; then
         echo "[sim] Erreur : PlatformIO (pio) introuvable. Installe-le via :" >&2
@@ -67,5 +70,5 @@ if [ ! -f "$BINARY" ]; then
     exit 1
 fi
 
-echo "[sim] Démarrage MinitelOS..."
+echo "[sim] Démarrage MinitelOS (${ENV})..."
 exec "$BINARY" "${FORWARD_ARGS[@]+"${FORWARD_ARGS[@]}"}"
