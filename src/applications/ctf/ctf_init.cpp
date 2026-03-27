@@ -80,12 +80,12 @@ void ctf_fs_init() {
     // ── Comptes utilisateurs — /etc/shadow est le fichier d'auth système ─────
     // Passwords (MD5) :
     //   root      = V1Oz5Re8G41EVmqWXl76 → 2260a49226afcd3bb784cb3e3888ea91)
-    //   stagiaire = 1234                 → 81dc9bdb52d04dc20036dbd8313ed055 (donné sur postit caché sous le clavier)
+    //   stagiaire = 1234                 → a963f94274c1e9eb8dea99691443ab07 (donné sur postit caché sous le clavier)
     //   admin     = 4815162342           → f7b16af5588f9654862e4aefcec8b0de (rockyou)
 
     ctf_write("/etc/shadow",
         "root:2260a49226afcd3bb784cb3e3888ea91:root\n"
-        "stagiaire:81dc9bdb52d04dc20036dbd8313ed055:user\n"
+        "stagiaire:a963f94274c1e9eb8dea99691443ab07:user\n"
         "admin:f7b16af5588f9654862e4aefcec8b0de:admin\n");
 
     // ── Flags (base64 — décoder hors application) ────────────────────────────
