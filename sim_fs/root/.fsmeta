@@ -5,4 +5,3 @@
 /home/admin/README.txt rw-r--r-- admin admin
 /scripts/maintenance.msh rwxrwxrwx root root
 /scripts/maintenance.log rw-rw-rw- root root
-/home/admin/motd_perso.txt rw-r--r-- root root

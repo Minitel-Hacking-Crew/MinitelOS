@@ -13,3 +13,4 @@ sim_fs/tmp/loot.txt
 src/.DS_Store
 sim_fs/cron.log
 src/sim/
+.pio/build/native/program
