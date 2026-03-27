@@ -27,16 +27,16 @@ static void ctf_remove(const char *path) {
 // ---------------------------------------------------------------------------
 // CTF filesystem init
 //
-// Chaîne :  stagiaire/1234 ──[C1 hash]──► admin/minitel ──[C2 flag]──[C3 motd]──► FLAG root
+// Chaîne :  stagiaire/1234 ──[C1 hash]──► admin/4815162342 ──[C2 flag]──[C3 motd]──► FLAG root
 //
 //   C1 (pas de flag) :
-//     cat /etc/shadow → hash admin crackable (minitel) → su admin
+//     cat /etc/shadow → hash admin crackable (4815162342) → su admin
 //     /etc/shadow est world-readable (misconfiguration volontaire)
 //     → hash root incrackable (mot de passe aléatoire)
 //
-//   C2 : cat ~/user.txt  → FLAG{4dm1n_4cc3ss}
+//   C2 : cat ~/user.txt  → base64 flag 1 (décoder hors appli)
 //
-//   C3 : edit motd_perso.txt → motd exécute en root → FLAG{r00t_m0td_pwn3d}
+//   C3 : edit motd_perso.txt → motd exécute en root → base64 flag 2 (décoder hors appli)
 // ---------------------------------------------------------------------------
 
 void ctf_fs_init() {
@@ -54,17 +54,17 @@ void ctf_fs_init() {
     // Passwords (MD5) :
     //   root      = V1Oz5Re8G41EVmqWXl76 → 2260a49226afcd3bb784cb3e3888ea91 (INCRACKABLE)
     //   stagiaire = 1234                 → 81dc9bdb52d04dc20036dbd8313ed055 (donné sur fiche)
-    //   admin     = minitel              → bb3c3e98175d33c8300fbb0e84bf9e9f (crackable via C1)
+    //   admin     = 4815162342           → f7b16af5588f9654862e4aefcec8b0de (crackable via C1)
     // En CTF_MODE : permissions rw-r--r-- (misconfiguration → world-readable)
     // En mode normal : devrait être rw------- root root
     ctf_write("/etc/shadow",
         "root:2260a49226afcd3bb784cb3e3888ea91:root\n"
         "stagiaire:81dc9bdb52d04dc20036dbd8313ed055:user\n"
-        "admin:bb3c3e98175d33c8300fbb0e84bf9e9f:admin\n");
+        "admin:f7b16af5588f9654862e4aefcec8b0de:admin\n");
 
-    // ── Flags ────────────────────────────────────────────────────────────────
-    ctf_write("/home/admin/user.txt", "FLAG{4dm1n_4cc3ss}\n");
-    ctf_write("/root/root.txt",       "FLAG{r00t_m0td_pwn3d}\n");
+    // ── Flags (base64 — décoder hors application) ────────────────────────────
+    ctf_write("/home/admin/user.txt", "bWluaXRlbCgwbGQzNTdfN3IxY2tfMW5fN2gzX2IwMGsp\n");
+    ctf_write("/root/root.txt",       "bWluaXRlbChnMDdfcjAwN18wbl8wbGRfbTFuMTczbCk=\n");
 
     // ── Cron — tourne en root, vecteur C1 ────────────────────────────────────
     // maintenance.msh world-writable → stagiaire injecte cat /etc/shadow > /tmp/loot.txt
@@ -99,17 +99,14 @@ void ctf_fs_init() {
         "2026-01-14 09:13:03\n"
         "2026-01-14 09:13:33\n");
 
-    // ── Challenge 2 — Flag admin ──────────────────────────────────────────────
+    // ── Fichiers admin ────────────────────────────────────────────────────────
     ctf_write("/home/admin/notes_perso.txt",
         "Memo perso admin - CONFIDENTIEL\n\n"
-        "Note : le systeme de motd personnalise a ete active\n"
-        "pour afficher des informations dynamiques au login.\n"
-        "Voir la documentation du systeme pour les details.\n");
+        "Rien de particulier a signaler.\n");
 
     ctf_write("/home/admin/README.txt",
         "Notes admin - 2026-01-14\n\n"
-        "Rappel : changer le mot de passe du compte admin avant la mise en prod.\n"
-        "Voir la documentation du systeme pour les procedures standard.\n");
+        "Maintenance systeme effectuee.\n");
 
     // ── Bannière ──────────────────────────────────────────────────────────────
     ctf_write("/.motd",
