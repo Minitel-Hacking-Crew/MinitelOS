@@ -263,28 +263,57 @@ sim_fs/                        # Système de fichiers simulé (monté à la raci
 ```
 
 ### Modèle de privilèges
-Trois niveaux : `user` → `admin` → `root`
 
-- `su <user>` : switch de session permanent (demande mot de passe, sauf si déjà root)
-- `sudo <cmd>` : élévation temporaire root ; vérifie `/etc/sudoers` d'abord (sans mot de passe), sinon demande le mot de passe root
+#### Niveaux d'accès
 
-### Groupes personnalisés
+| Niveau | Description |
+|--------|-------------|
+| `user` | Utilisateur standard — accès à son home uniquement |
+| `admin` | Accès étendu — peut gérer certains fichiers système |
+| `root` | Accès total — toutes les commandes, tous les fichiers |
 
-Les groupes sont stockés dans `/root/.groups` (format : `nom:user1,user2,...`).
+#### Changement de session
+
+| Commande | Comportement |
+|----------|-------------|
+| `su <user>` | Switch permanent vers un autre utilisateur (demande son mot de passe, sauf si déjà root) |
+| `sudo <cmd>` | Élévation temporaire root pour une commande — vérifie `/etc/sudoers` en premier (sans mot de passe si règle match), sinon demande le mot de passe root |
+
+#### Permissions fichiers
+
+Les permissions suivent le modèle Unix (`rwxrwxrwx` : propriétaire / groupe / autres).
+
+- `chmod <mode> <fichier>` — modifiable par le propriétaire ou root (`644`, `rwxr-xr-x`…)
+- `chown <user>[:<group>] <fichier>` — changer le propriétaire (root) ou le groupe (propriétaire, si membre du groupe cible)
+- Les métadonnées sont stockées dans `/root/.fsmeta`
+
+#### Groupes
+
+Les groupes contrôlent les bits groupe des permissions fichiers.
 
 Groupes intégrés (non modifiables) :
-- `user` — tous les utilisateurs connectés
-- `admin` — utilisateurs de niveau `admin` et `root`
-- `root` — uniquement `root`
-- `<username>` — groupe personnel de l'utilisateur
+| Groupe | Membres |
+|--------|---------|
+| `user` | Tous les utilisateurs connectés |
+| `admin` | Utilisateurs de niveau `admin` et `root` |
+| `root` | Uniquement `root` |
+| `<username>` | Groupe personnel — uniquement cet utilisateur |
 
-Exemple sudoers :
+Groupes personnalisés : stockés dans `/root/.groups` (format : `nom:user1,user2,...`), gérés via `groupadd` / `groupdel` / `groupmem` (root uniquement).
+
+#### Sudoers
+
+Format de `/etc/sudoers` — une règle par ligne :
 ```
 # Autoriser alice à exécuter cat et ls sans mot de passe
 alice cat,ls
 # Autoriser tous les membres du groupe devs à tout faire
 %devs ALL
+# Autoriser bob à tout faire
+bob ALL
 ```
+
+Géré via `sudoedit add` / `sudoedit del` / `sudoedit list` (root uniquement).
 
 ### Stockage
 | Fichier | Contenu |
