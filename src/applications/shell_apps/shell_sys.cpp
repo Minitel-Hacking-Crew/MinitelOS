@@ -124,7 +124,8 @@ void shell_reboot()
 
 void shell_clear()
 {
-    minitel.newScreen();
+    minitel.clearScreen();
+    minitel.moveCursorXY(1, 1);
 }
 
 void shell_df(const String &)
