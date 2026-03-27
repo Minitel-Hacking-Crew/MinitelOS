@@ -30,16 +30,33 @@ pio device monitor      # moniteur série (115200 bauds)
 ```
 
 ### Simulateur natif (sans matériel)
+
+Le script `minitel-sim` inclus dans le repo gère le build et le lancement en une seule commande :
+
 ```bash
-pio run -e native                         # compile le simulateur
-.pio/build/native/program                 # vitesse normale
-.pio/build/native/program --baud=1200     # simulation vitesse Minitel 1B (1200 bauds)
-.pio/build/native/program --baud=4800     # simulation vitesse Minitel 2
+./minitel-sim                   # build auto si absent, puis lance
+./minitel-sim --baud=1200       # simule la vitesse Minitel 1B (1200 bauds)
+./minitel-sim --baud=4800       # simule la vitesse Minitel 2
+./minitel-sim --reset           # remet à zéro les fichiers de session avant le lancement
+./minitel-sim --build           # force un rebuild complet
+./minitel-sim --help            # affiche l'aide
 ```
 
-Le simulateur monte `sim_fs/` comme système de fichiers, simule le WiFi (internet réel via libcurl), et émule le terminal Minitel dans le terminal ANSI.
+> **Prérequis** : [PlatformIO](https://platformio.org/) (`pip install platformio`)
 
-L'argument `--baud` (ou `-b`) ralentit l'affichage des caractères pour reproduire fidèlement la vitesse série d'un vrai Minitel. Seuls les caractères visibles sont throttlés — les séquences de contrôle (curseur, effacement) restent instantanées.
+En mode manuel :
+```bash
+pio run -e native               # compile uniquement
+.pio/build/native/program       # lance directement
+```
+
+**Ce que simule le simulateur :**
+- `sim_fs/` monté comme système de fichiers LittleFS
+- Terminal Minitel rendu en ANSI dans le terminal courant
+- WiFi simulé avec internet réel via libcurl
+- `--baud` throttle l'affichage des caractères visibles pour reproduire la vitesse série d'un vrai Minitel (les séquences de contrôle restent instantanées)
+
+**`--reset`** supprime les fichiers générés à chaud par les sessions (`/root/.groups`, `/etc/sudoers`, `/root/.fsmeta`) pour repartir d'un état propre.
 
 ---
 
