@@ -85,14 +85,66 @@ void set_file_meta(const String &path, const String &perms,
     write_meta(path, perms, owner, group);
 }
 
+// Vérifie si la session appartient au groupe du fichier.
+// Hiérarchie : "user" = tout le monde, "admin" = admin+root, "root" = root seul.
+// Un nom d'utilisateur exact correspond à ce user uniquement.
+// Les groupes personnalisés sont stockés dans /root/.groups : "nom:user1,user2,..."
+static bool user_in_group(const String &group) {
+    if (group == sessionUsername)    return true;
+    if (group == "user")             return true;
+    if (group == "admin")            return sessionAccessLevel == "admin" ||
+                                            sessionAccessLevel == "root";
+    if (group == "root")             return sessionAccessLevel == "root";
+    // Groupes personnalisés
+    static const char *GROUPS_FILE = "/root/.groups";
+    if (LittleFS.exists(GROUPS_FILE)) {
+        File f = LittleFS.open(GROUPS_FILE, "r");
+        if (f) {
+            while (f.available()) {
+                String line = f.readStringUntil('\n');
+                line.trim();
+                int colon = line.indexOf(':');
+                if (colon < 0) continue;
+                if (line.substring(0, colon) != group) continue;
+                String members = line.substring(colon + 1);
+                // members = "user1,user2,..."
+                int pos = 0;
+                while (pos <= (int)members.length()) {
+                    int comma = members.indexOf(',', pos);
+                    String member = (comma < 0)
+                        ? members.substring(pos)
+                        : members.substring(pos, comma);
+                    member.trim();
+                    if (member == sessionUsername) { f.close(); return true; }
+                    if (comma < 0) break;
+                    pos = comma + 1;
+                }
+                break;
+            }
+            f.close();
+        }
+    }
+    return false;
+}
+
 bool fs_can_access(const String &path, char perm) {
     if (sessionAccessLevel == "root") return true;
     FileMeta m = get_file_meta(path);
-    bool isOwner = (m.owner == sessionUsername);
     int offset = (perm == 'r') ? 0 : (perm == 'w') ? 1 : 2;
-    char ownerBit = ((int)m.perms.length() > offset)     ? m.perms[offset]     : '-';
-    char otherBit = ((int)m.perms.length() > 6 + offset) ? m.perms[6 + offset] : '-';
-    return isOwner ? (ownerBit == perm) : (otherBit == perm);
+
+    if (m.owner == sessionUsername) {
+        // Bits propriétaire (0-2)
+        char bit = ((int)m.perms.length() > offset) ? m.perms[offset] : '-';
+        return bit == perm;
+    }
+    if (user_in_group(m.group)) {
+        // Bits groupe (3-5)
+        char bit = ((int)m.perms.length() > 3 + offset) ? m.perms[3 + offset] : '-';
+        return bit == perm;
+    }
+    // Bits autres (6-8)
+    char bit = ((int)m.perms.length() > 6 + offset) ? m.perms[6 + offset] : '-';
+    return bit == perm;
 }
 
 static String numeric_to_perms(const String &modeStr) {
@@ -340,11 +392,72 @@ void shell_sleep(const String &args) {
 }
 
 // ─── sudo ────────────────────────────────────────────────────────────────────
+// Vérifie si l'utilisateur courant peut exécuter cmd via /etc/sudoers.
+// Format : "user ALL" | "user cmd1,cmd2" | "%group ALL" | "%group cmd1,cmd2"
+static bool sudoers_allows(const String &cmd) {
+    static const char *SUDOERS_FILE = "/etc/sudoers";
+    if (!LittleFS.exists(SUDOERS_FILE)) return false;
+    File f = LittleFS.open(SUDOERS_FILE, "r");
+    if (!f) return false;
+    // Extrait le nom de la commande (premier token)
+    String cmdName = cmd;
+    int sp = cmd.indexOf(' ');
+    if (sp > 0) cmdName = cmd.substring(0, sp);
+    cmdName.trim();
+    bool allowed = false;
+    while (f.available() && !allowed) {
+        String line = f.readStringUntil('\n');
+        line.trim();
+        if (line.length() == 0 || line.startsWith("#")) continue;
+        // Sépare sujet et commandes
+        int sep = line.indexOf(' ');
+        if (sep < 0) continue;
+        String subject = line.substring(0, sep);
+        String cmds    = line.substring(sep + 1);
+        cmds.trim();
+        // Vérifie si le sujet correspond
+        bool match = false;
+        if (subject.startsWith("%")) {
+            // Groupe
+            match = user_in_group(subject.substring(1));
+        } else {
+            match = (subject == sessionUsername);
+        }
+        if (!match) continue;
+        // Vérifie si la commande est autorisée
+        if (cmds == "ALL") { allowed = true; break; }
+        int pos = 0;
+        while (pos <= (int)cmds.length()) {
+            int comma = cmds.indexOf(',', pos);
+            String entry = (comma < 0) ? cmds.substring(pos) : cmds.substring(pos, comma);
+            entry.trim();
+            if (entry == cmdName || entry == "ALL") { allowed = true; break; }
+            if (comma < 0) break;
+            pos = comma + 1;
+        }
+    }
+    f.close();
+    return allowed;
+}
+
 void shell_sudo(const String &args) {
     if (args.isEmpty()) { shell_println_wrapped("Usage: sudo <commande>"); return; }
     // Deja root : execution directe
     if (sessionAccessLevel == "root") {
         shell_eval_line(args); return;
+    }
+    // Vérification sudoers : si autorisé, pas besoin de mot de passe
+    if (sudoers_allows(args)) {
+        String savedLevel = sessionAccessLevel;
+        String savedUser  = sessionUsername;
+        sessionAccessLevel = "root";
+        sessionUsername    = "root";
+        shell_eval_line(args);
+        if (sessionUsername == "root" && savedUser != "root") {
+            sessionAccessLevel = savedLevel;
+            sessionUsername    = savedUser;
+        }
+        return;
     }
     // Demande le mot de passe root
     String pass = saisirTexte("Mot de passe root : ", true, 64, "");
@@ -389,10 +502,6 @@ void shell_sudo(const String &args) {
 // ─── chown ───────────────────────────────────────────────────────────────────
 void shell_chown(const String &args) {
     // Usage: chown <user>[:<group>] <path>
-    if (sessionAccessLevel != "root") {
-        shell_println_wrapped("Acces refuse : root uniquement");
-        return;
-    }
     int sp = args.indexOf(' ');
     if (sp < 0) { shell_println_wrapped("Usage: chown <user>[:<group>] <fichier>"); return; }
     String ownership = args.substring(0, sp);
@@ -401,16 +510,36 @@ void shell_chown(const String &args) {
         shell_println_wrapped("Introuvable : " + path);
         return;
     }
-    String owner = ownership;
-    String group = ownership;
+    String newOwner = ownership;
+    String newGroup = ownership;
     int colon = ownership.indexOf(':');
     if (colon >= 0) {
-        owner = ownership.substring(0, colon);
-        group = ownership.substring(colon + 1);
+        newOwner = ownership.substring(0, colon);
+        newGroup = ownership.substring(colon + 1);
     }
     FileMeta m = read_meta(path);
-    write_meta(path, m.perms, owner, group);
-    shell_println_wrapped(path + " -> " + owner + ":" + group);
+    bool isOwner = (m.owner == sessionUsername);
+    bool isRoot  = (sessionAccessLevel == "root");
+
+    // Changer le propriétaire : root uniquement
+    if (newOwner != m.owner && !isRoot) {
+        shell_println_wrapped("Acces refuse : seul root peut changer le proprietaire");
+        return;
+    }
+    // Changer le groupe : propriétaire ou root
+    // Le propriétaire ne peut assigner qu'un groupe auquel il appartient lui-même
+    if (newGroup != m.group && !isRoot) {
+        if (!isOwner) {
+            shell_println_wrapped("Acces refuse : vous n'etes pas proprietaire");
+            return;
+        }
+        if (!user_in_group(newGroup)) {
+            shell_println_wrapped("Acces refuse : vous n'appartenez pas au groupe " + newGroup);
+            return;
+        }
+    }
+    write_meta(path, m.perms, newOwner, newGroup);
+    shell_println_wrapped(path + " -> " + newOwner + ":" + newGroup);
 }
 
 // ─── ctftime ─────────────────────────────────────────────────────────────────

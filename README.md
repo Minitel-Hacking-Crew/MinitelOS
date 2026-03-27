@@ -65,9 +65,17 @@ Au premier boot (ou après réinitialisation), un assistant de configuration se 
 | `whoami` | Utilisateur actuel |
 | `passwd` | Changer son mot de passe |
 | `su <user>` | Changer d'utilisateur |
-| `sudo <cmd>` | Exécuter une commande en root (élévation temporaire) |
+| `sudo <cmd>` | Élévation temporaire root (sudoers ou mot de passe root) |
 | `adduser` | Créer un utilisateur (root) |
 | `deluser` | Supprimer un utilisateur (root) |
+| `groupadd <nom>` | Créer un groupe (root) |
+| `groupdel <nom>` | Supprimer un groupe (root) |
+| `groupmem <groupe> <user>` | Ajouter un utilisateur à un groupe (root) |
+| `groupmem -d <groupe> <user>` | Retirer un utilisateur d'un groupe (root) |
+| `groups [user]` | Lister les groupes d'un utilisateur |
+| `sudoedit list` | Afficher les règles sudoers (root) |
+| `sudoedit add <sujet> <cmds>` | Ajouter une règle sudoers (root) |
+| `sudoedit del <num>` | Supprimer une règle sudoers (root) |
 | `login` / `logout` / `exit` | Connexion / déconnexion |
 | `reboot` | Redémarrer l'ESP32 |
 | `clear` | Effacer l'écran |
@@ -258,12 +266,32 @@ sim_fs/                        # Système de fichiers simulé (monté à la raci
 Trois niveaux : `user` → `admin` → `root`
 
 - `su <user>` : switch de session permanent (demande mot de passe, sauf si déjà root)
-- `sudo <cmd>` : élévation temporaire root pour une commande ; si `sudo su <user>`, la session bascule définitivement
+- `sudo <cmd>` : élévation temporaire root ; vérifie `/etc/sudoers` d'abord (sans mot de passe), sinon demande le mot de passe root
+
+### Groupes personnalisés
+
+Les groupes sont stockés dans `/root/.groups` (format : `nom:user1,user2,...`).
+
+Groupes intégrés (non modifiables) :
+- `user` — tous les utilisateurs connectés
+- `admin` — utilisateurs de niveau `admin` et `root`
+- `root` — uniquement `root`
+- `<username>` — groupe personnel de l'utilisateur
+
+Exemple sudoers :
+```
+# Autoriser alice à exécuter cat et ls sans mot de passe
+alice cat,ls
+# Autoriser tous les membres du groupe devs à tout faire
+%devs ALL
+```
 
 ### Stockage
 | Fichier | Contenu |
 |---------|---------|
 | `/etc/shadow` | `user:MD5(pass):level` |
+| `/etc/sudoers` | Règles sudo : `user\|%group ALL\|cmd1,cmd2` |
+| `/root/.groups` | Groupes personnalisés : `nom:user1,user2,...` |
 | `/root/.crontab` | Tâches cron |
 | `/root/.fsmeta` | Permissions chmod/chown |
 | `/.motd` | Message du jour |
