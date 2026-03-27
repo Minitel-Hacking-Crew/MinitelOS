@@ -14,3 +14,12 @@ src/.DS_Store
 sim_fs/cron.log
 src/sim/
 .pio/build/native/program
+
+# Fichiers générés par le simulateur standard (session)
+sim_fs_standard/etc/shadow
+sim_fs_standard/root/.groups
+sim_fs_standard/etc/sudoers
+sim_fs_standard/root/.fsmeta
+sim_fs_standard/home/*/
+sim_fs_standard/tmp/
+.pio/build/native-ctf/program

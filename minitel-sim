@@ -7,22 +7,23 @@
 # Options:
 #   -b, --baud <rate>   Vitesse simulée en bauds (1200, 2400, 4800, 9600)
 #       --baud=<rate>   Même effet
-#       --ctf           Mode CTF (env native-ctf)
-#       --reset         Réinitialise les fichiers de session (groupes, sudoers, fsmeta)
+#       --ctf           Mode CTF (env native-ctf, sim_fs/)
+#       --reset         Réinitialise les fichiers de session du mode courant
 #       --build         Force un rebuild complet avant le lancement
 #   -h, --help          Affiche cette aide
 #
 # Exemples:
-#   ./minitel-sim                    Lancement standard (build auto si absent)
+#   ./minitel-sim                    Lancement standard avec first boot
 #   ./minitel-sim --ctf              Lancement en mode CTF
 #   ./minitel-sim --baud=1200        Simule une connexion à 1200 bauds
-#   ./minitel-sim --reset --build    Reset + rebuild propre
+#   ./minitel-sim --reset            Remet à zéro la session courante
+#   ./minitel-sim --ctf --reset      Reset du mode CTF
 
 set -euo pipefail
 
-SIM_FS="sim_fs"
 ENV="native"
 BINARY=".pio/build/native/program"
+SIM_FS="sim_fs_standard"
 
 print_help() {
     grep '^#' "$0" | sed 's/^# \?//'
@@ -35,11 +36,12 @@ rebuild() {
 }
 
 reset_fs() {
-    echo "[sim] Réinitialisation des fichiers de session..."
-    rm -f "${SIM_FS}/root/.groups" \
+    echo "[sim] Réinitialisation de ${SIM_FS}..."
+    rm -f "${SIM_FS}/etc/shadow"   \
+          "${SIM_FS}/root/.groups" \
           "${SIM_FS}/etc/sudoers"  \
           "${SIM_FS}/root/.fsmeta" 2>/dev/null || true
-    rm -rf "${SIM_FS}/tmp"/* 2>/dev/null || true
+    rm -rf "${SIM_FS}/tmp"/* "${SIM_FS}/home"/*/  2>/dev/null || true
     echo "[sim] Fait."
 }
 
@@ -50,11 +52,13 @@ for arg in "$@"; do
     case "$arg" in
         --help|-h) print_help ;;
         --build)   FORCE_BUILD=true ;;
-        --reset)   reset_fs ;;
-        --ctf)     ENV="native-ctf"; BINARY=".pio/build/native-ctf/program" ;;
+        --reset)   RESET=true ;;
+        --ctf)     ENV="native-ctf"; BINARY=".pio/build/native-ctf/program"; SIM_FS="sim_fs" ;;
         *)         FORWARD_ARGS+=("$arg") ;;
     esac
 done
+
+${RESET:-false} && reset_fs
 
 if [ ! -f "$BINARY" ] || [ "$FORCE_BUILD" = true ]; then
     if ! command -v pio &>/dev/null; then
