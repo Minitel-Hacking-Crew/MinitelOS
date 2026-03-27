@@ -112,8 +112,10 @@ File File::openNextFile() {
 
 // =============================================================================
 // MD5 — public domain implementation (Alexei Kravchenko / RFC 1321)
+// Sur macOS, CommonCrypto est utilisé à la place (voir mbedtls/md5.h)
 // =============================================================================
 extern "C" {
+#ifndef __APPLE__
 
 #define MD5_F(x,y,z) ((z)^((x)&((y)^(z))))
 #define MD5_G(x,y,z) ((y)^((z)&((x)^(y))))
@@ -221,6 +223,7 @@ void _md5_final(uint8_t* result, _MD5_CTX* ctx) {
     result[12]=ctx->d; result[13]=ctx->d>>8; result[14]=ctx->d>>16; result[15]=ctx->d>>24;
 }
 
+#endif // !__APPLE__
 } // extern "C"
 
 // =============================================================================
