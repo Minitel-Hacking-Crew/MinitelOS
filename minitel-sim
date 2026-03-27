@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# MinitelOS Simulator — build (si besoin) et lance le simulateur natif
+#
+# Usage:
+#   ./minitel-sim [OPTIONS]
+#
+# Options:
+#   -b, --baud <rate>   Vitesse simulée en bauds (1200, 2400, 4800, 9600)
+#       --baud=<rate>   Même effet
+#       --reset         Réinitialise les fichiers de session (groupes, sudoers, fsmeta)
+#       --build         Force un rebuild complet avant le lancement
+#   -h, --help          Affiche cette aide
+#
+# Exemples:
+#   ./minitel-sim                   Lancement rapide (build auto si absent)
+#   ./minitel-sim --baud=1200       Simule une connexion à 1200 bauds
+#   ./minitel-sim --reset --build   Reset + rebuild propre
+
+set -euo pipefail
+
+BINARY=".pio/build/native/program"
+SIM_FS="sim_fs"
+
+print_help() {
+    grep '^#' "$0" | sed 's/^# \?//'
+    exit 0
+}
+
+rebuild() {
+    echo "[sim] Build en cours (pio run -e native)..."
+    pio run -e native
+}
+
+reset_fs() {
+    echo "[sim] Réinitialisation des fichiers de session..."
+    rm -f "${SIM_FS}/root/.groups" \
+          "${SIM_FS}/etc/sudoers"  \
+          "${SIM_FS}/root/.fsmeta" 2>/dev/null || true
+    rm -rf "${SIM_FS}/tmp"/* 2>/dev/null || true
+    echo "[sim] Fait."
+}
+
+FORCE_BUILD=false
+FORWARD_ARGS=()
+
+for arg in "$@"; do
+    case "$arg" in
+        --help|-h) print_help ;;
+        --build)   FORCE_BUILD=true ;;
+        --reset)   reset_fs ;;
+        *)         FORWARD_ARGS+=("$arg") ;;
+    esac
+done
+
+# Build automatique si binaire absent ou --build demandé
+if [ ! -f "$BINARY" ] || [ "$FORCE_BUILD" = true ]; then
+    if ! command -v pio &>/dev/null; then
+        echo "[sim] Erreur : PlatformIO (pio) introuvable. Installe-le via :" >&2
+        echo "  pip install platformio" >&2
+        exit 1
+    fi
+    rebuild
+fi
+
+if [ ! -f "$BINARY" ]; then
+    echo "[sim] Erreur : binaire introuvable après build." >&2
+    exit 1
+fi
+
+echo "[sim] Démarrage MinitelOS..."
+exec "$BINARY" "${FORWARD_ARGS[@]+"${FORWARD_ARGS[@]}"}"
