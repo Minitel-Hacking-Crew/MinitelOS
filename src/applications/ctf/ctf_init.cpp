@@ -121,15 +121,6 @@ void ctf_fs_init() {
         "2026-01-14 09:13:03\n"
         "2026-01-14 09:13:33\n");
 
-    // ── Fichiers admin ────────────────────────────────────────────────────────
-    ctf_write("/home/admin/notes_perso.txt",
-        "Memo perso admin - CONFIDENTIEL\n\n"
-        "Rien de particulier a signaler.\n");
-
-    ctf_write("/home/admin/README.txt",
-        "Notes admin - 2026-01-14\n\n"
-        "Maintenance systeme effectuee.\n");
-
     // ── Bannière ──────────────────────────────────────────────────────────────
     ctf_write("/.motd",
         "Acces restreint - personnel autorise uniquement\n"
