@@ -5,6 +5,11 @@
 
 struct FileMeta { String perms; String owner; String group; };
 FileMeta get_file_meta(const String &path);
+void set_file_meta(const String &path, const String &perms,
+                   const String &owner, const String &group);
+// Vérifie si la session courante a le droit perm ('r','w','x') sur path.
+// Root passe toujours. Sinon : bits owner si propriétaire, bits other sinon.
+bool fs_can_access(const String &path, char perm);
 
 void shell_touch(const String &args);
 void shell_env(const String &args);

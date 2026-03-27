@@ -1,0 +1,5 @@
+Memo perso admin - CONFIDENTIEL
+
+Note : le systeme de motd personnalise a ete active
+pour afficher des informations dynamiques au login.
+Voir la documentation du systeme pour les details.

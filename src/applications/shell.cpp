@@ -27,7 +27,11 @@ void shell_wifi_wrapper(const String &) { connecterWiFi(); }
 void shell_ifconfig_wrapper(const String &) { shell_ifconfig(""); }
 void shell_run_wrapper(const String &args) { shell_run(args); }
 void shell_adduser(const String &);
-
+void shell_groupadd(const String &);
+void shell_groupdel(const String &);
+void shell_groupmem(const String &);
+void shell_groups_cmd(const String &);
+void shell_sudoedit(const String &);
 
 void shell_history_clear(const String &)
 {
@@ -95,8 +99,13 @@ ShellCommand commands[] = {
     {"du",       shell_du},
     {"nslookup", shell_nslookup},
     {"sleep",    shell_sleep},
-    {"sudo",     shell_sudo},
-    {"ctftime",  shell_ctftime},
+    {"sudo",      shell_sudo},
+    {"ctftime",   shell_ctftime},
+    {"groupadd",  shell_groupadd},
+    {"groupdel",  shell_groupdel},
+    {"groupmem",  shell_groupmem},
+    {"groups",    shell_groups_cmd},
+    {"sudoedit",  shell_sudoedit},
 };
 
 int numCommands = sizeof(commands) / sizeof(commands[0]);

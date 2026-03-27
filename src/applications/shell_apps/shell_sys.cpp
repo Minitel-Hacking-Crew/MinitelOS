@@ -798,3 +798,246 @@ void shell_deluser(const String &)
     minitel.println();
     shell_println_wrapped("Utilisateur supprime : " + username);
 }
+
+// ─── Gestion des groupes ─────────────────────────────────────────────────────
+// Format /root/.groups : "nomgroupe:user1,user2,..." (une ligne par groupe)
+
+static const char *GROUPS_FILE = "/root/.groups";
+
+// Lit tous les groupes → map nom → liste membres
+static std::vector<std::pair<String, String>> read_groups() {
+    std::vector<std::pair<String, String>> result;
+    if (!LittleFS.exists(GROUPS_FILE)) return result;
+    File f = LittleFS.open(GROUPS_FILE, "r");
+    if (!f) return result;
+    while (f.available()) {
+        String line = f.readStringUntil('\n');
+        line.trim();
+        if (line.length() == 0) continue;
+        int colon = line.indexOf(':');
+        if (colon < 0) continue;
+        result.push_back({line.substring(0, colon), line.substring(colon + 1)});
+    }
+    f.close();
+    return result;
+}
+
+// Écrit les groupes → fichier
+static void write_groups(const std::vector<std::pair<String, String>> &groups) {
+    File f = LittleFS.open(GROUPS_FILE, "w");
+    if (!f) return;
+    for (auto &g : groups) f.println(g.first + ":" + g.second);
+    f.close();
+}
+
+void shell_groupadd(const String &args) {
+    if (sessionAccessLevel != "root") {
+        shell_println_wrapped("Acces refuse : root uniquement");
+        return;
+    }
+    String name = args;
+    name.trim();
+    if (name.length() == 0) { shell_println_wrapped("Usage: groupadd <nom>"); return; }
+    auto groups = read_groups();
+    for (auto &g : groups) {
+        if (g.first == name) {
+            shell_println_wrapped("Groupe deja existant : " + name);
+            return;
+        }
+    }
+    groups.push_back({name, ""});
+    write_groups(groups);
+    shell_println_wrapped("Groupe cree : " + name);
+}
+
+void shell_groupdel(const String &args) {
+    if (sessionAccessLevel != "root") {
+        shell_println_wrapped("Acces refuse : root uniquement");
+        return;
+    }
+    String name = args;
+    name.trim();
+    if (name.length() == 0) { shell_println_wrapped("Usage: groupdel <nom>"); return; }
+    auto groups = read_groups();
+    bool found = false;
+    std::vector<std::pair<String, String>> newGroups;
+    for (auto &g : groups) {
+        if (g.first == name) { found = true; continue; }
+        newGroups.push_back(g);
+    }
+    if (!found) { shell_println_wrapped("Groupe introuvable : " + name); return; }
+    write_groups(newGroups);
+    shell_println_wrapped("Groupe supprime : " + name);
+}
+
+// groupmem <group> <user>      — ajoute user au groupe
+// groupmem -d <group> <user>   — retire user du groupe
+void shell_groupmem(const String &args) {
+    if (sessionAccessLevel != "root") {
+        shell_println_wrapped("Acces refuse : root uniquement");
+        return;
+    }
+    String tmp = args;
+    tmp.trim();
+    bool remove = false;
+    if (tmp.startsWith("-d ")) {
+        remove = true;
+        tmp = tmp.substring(3);
+        tmp.trim();
+    }
+    int sp = tmp.indexOf(' ');
+    if (sp < 0) {
+        shell_println_wrapped("Usage: groupmem [-d] <groupe> <user>");
+        return;
+    }
+    String groupName = tmp.substring(0, sp);
+    String userName  = tmp.substring(sp + 1);
+    groupName.trim(); userName.trim();
+
+    auto groups = read_groups();
+    bool found = false;
+    for (auto &g : groups) {
+        if (g.first != groupName) continue;
+        found = true;
+        // Parse members
+        std::vector<String> members;
+        String raw = g.second;
+        int pos = 0;
+        while (pos <= (int)raw.length()) {
+            int c = raw.indexOf(',', pos);
+            String m = (c < 0) ? raw.substring(pos) : raw.substring(pos, c);
+            m.trim();
+            if (m.length() > 0) members.push_back(m);
+            if (c < 0) break;
+            pos = c + 1;
+        }
+        if (remove) {
+            std::vector<String> updated;
+            for (auto &m : members) if (m != userName) updated.push_back(m);
+            String newMembers = "";
+            for (size_t i = 0; i < updated.size(); i++) {
+                if (i > 0) newMembers += ",";
+                newMembers += updated[i];
+            }
+            g.second = newMembers;
+            shell_println_wrapped(userName + " retire de " + groupName);
+        } else {
+            for (auto &m : members) {
+                if (m == userName) {
+                    shell_println_wrapped(userName + " est deja dans " + groupName);
+                    write_groups(groups);
+                    return;
+                }
+            }
+            g.second = (g.second.length() > 0) ? g.second + "," + userName : userName;
+            shell_println_wrapped(userName + " ajoute a " + groupName);
+        }
+        break;
+    }
+    if (!found) { shell_println_wrapped("Groupe introuvable : " + groupName); return; }
+    write_groups(groups);
+}
+
+// groups [user]  — liste les groupes d'un utilisateur (défaut : session courante)
+void shell_groups_cmd(const String &args) {
+    String targetUser = args;
+    targetUser.trim();
+    if (targetUser.length() == 0) targetUser = sessionUsername;
+
+    String result = targetUser + " : user";
+    // Groupes hiérarchiques
+    if (targetUser == sessionUsername) {
+        if (sessionAccessLevel == "admin" || sessionAccessLevel == "root")
+            result += " admin";
+        if (sessionAccessLevel == "root")
+            result += " root";
+        result += " " + sessionUsername;
+    }
+    // Groupes personnalisés
+    auto groups = read_groups();
+    for (auto &g : groups) {
+        // Cherche dans les membres
+        String raw = g.second;
+        int pos = 0;
+        while (pos <= (int)raw.length()) {
+            int c = raw.indexOf(',', pos);
+            String m = (c < 0) ? raw.substring(pos) : raw.substring(pos, c);
+            m.trim();
+            if (m == targetUser) { result += " " + g.first; break; }
+            if (c < 0) break;
+            pos = c + 1;
+        }
+    }
+    shell_println_wrapped(result);
+}
+
+// ─── Gestion sudoers ─────────────────────────────────────────────────────────
+// Format /etc/sudoers : "user ALL" | "user cmd1,cmd2" | "%group ALL"
+
+static const char *SUDOERS_FILE = "/etc/sudoers";
+
+void shell_sudoedit(const String &args) {
+    if (sessionAccessLevel != "root") {
+        shell_println_wrapped("Acces refuse : root uniquement");
+        return;
+    }
+    String tmp = args;
+    tmp.trim();
+    if (tmp == "list") {
+        // Affiche les règles existantes
+        if (!LittleFS.exists(SUDOERS_FILE)) {
+            shell_println_wrapped("(aucune regle)");
+            return;
+        }
+        File f = LittleFS.open(SUDOERS_FILE, "r");
+        int n = 0;
+        while (f && f.available()) {
+            String line = f.readStringUntil('\n');
+            line.trim();
+            if (line.length() == 0 || line.startsWith("#")) continue;
+            n++;
+            shell_println_wrapped(String(n) + ": " + line);
+        }
+        if (f) f.close();
+        if (n == 0) shell_println_wrapped("(aucune regle)");
+        return;
+    }
+    if (tmp.startsWith("add ")) {
+        // sudoedit add <sujet> <cmds>
+        String rule = tmp.substring(4);
+        rule.trim();
+        if (rule.length() == 0) {
+            shell_println_wrapped("Usage: sudoedit add <user|%group> <ALL|cmd1,cmd2>");
+            return;
+        }
+        File f = LittleFS.open(SUDOERS_FILE, "a");
+        if (!f) { shell_println_wrapped("Erreur ecriture sudoers"); return; }
+        f.println(rule);
+        f.close();
+        shell_println_wrapped("Regle ajoutee : " + rule);
+        return;
+    }
+    if (tmp.startsWith("del ")) {
+        // sudoedit del <numero>
+        int num = tmp.substring(4).toInt();
+        if (num <= 0) { shell_println_wrapped("Usage: sudoedit del <numero>"); return; }
+        if (!LittleFS.exists(SUDOERS_FILE)) { shell_println_wrapped("Aucune regle"); return; }
+        File f = LittleFS.open(SUDOERS_FILE, "r");
+        std::vector<String> lines;
+        while (f && f.available()) {
+            String line = f.readStringUntil('\n');
+            line.trim();
+            if (line.length() == 0 || line.startsWith("#")) continue;
+            lines.push_back(line);
+        }
+        if (f) f.close();
+        if (num > (int)lines.size()) { shell_println_wrapped("Numero invalide"); return; }
+        String removed = lines[num - 1];
+        lines.erase(lines.begin() + num - 1);
+        File out = LittleFS.open(SUDOERS_FILE, "w");
+        if (out) { for (auto &l : lines) out.println(l); out.close(); }
+        shell_println_wrapped("Regle supprimee : " + removed);
+        return;
+    }
+    shell_println_wrapped("Usage: sudoedit list | add <sujet> <cmds> | del <num>");
+}
