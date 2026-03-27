@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "applications/shell_apps/shell_extra.h"
 
 void shell_edit(const String &args)
 {
@@ -18,6 +19,10 @@ void shell_edit(const String &args)
     std::vector<String> lines;
     if (LittleFS.exists(filename))
     {
+        if (!fs_can_access(filename, 'r')) {
+            shell_println_wrapped("Acces refuse : " + filename);
+            return;
+        }
         File file = LittleFS.open(filename, "r");
         while (file && file.available())
         {
@@ -230,6 +235,10 @@ void shell_edit(const String &args)
         }
         else if (cmd == "w")
         {
+            if (!fs_can_access(filename, 'w')) {
+                minitel.println();
+                shell_println_wrapped("Acces refuse en ecriture : " + filename);
+            } else {
             File file = LittleFS.open(filename, FILE_WRITE);
             if (!file)
             {
@@ -248,10 +257,15 @@ void shell_edit(const String &args)
                 minitel.println();
                 shell_println_wrapped("Fichier sauvegarde.");
                 modified = false;
+            }
             }
         }
         else if (cmd == "wq")
         {
+            if (!fs_can_access(filename, 'w')) {
+                minitel.println();
+                shell_println_wrapped("Acces refuse en ecriture : " + filename);
+            } else {
             File file = LittleFS.open(filename, FILE_WRITE);
             if (!file)
             {
@@ -270,6 +284,7 @@ void shell_edit(const String &args)
                 minitel.println();
                 shell_println_wrapped("Fichier sauvegarde.");
                 modified = false;
+            }
             }
             break;
         }

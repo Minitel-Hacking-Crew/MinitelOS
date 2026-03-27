@@ -37,6 +37,10 @@ void shell_cat(const String &args)
         shell_println_wrapped("Fichier introuvable : " + filename);
         return;
     }
+    if (!fs_can_access(filename, 'r')) {
+        shell_println_wrapped("Acces refuse");
+        return;
+    }
     File file = LittleFS.open(filename, "r");
     if (!file)
     {
@@ -137,6 +141,10 @@ void shell_cp(const String &args)
     if (!LittleFS.exists(src))
     {
         shell_println_wrapped("Fichier introuvable : " + src);
+        return;
+    }
+    if (!fs_can_access(src, 'r')) {
+        shell_println_wrapped("Acces refuse : " + src);
         return;
     }
     File fsrc = LittleFS.open(src, "r");
@@ -307,6 +315,7 @@ void shell_mkdir(const String &args)
     }
     if (LittleFS.mkdir(dirname))
     {
+        set_file_meta(dirname, "rwxr-xr-x", sessionUsername, sessionUsername);
         shell_println_wrapped("Dossier cree : " + dirname);
     }
     else
@@ -361,6 +370,10 @@ void shell_mv(const String &args)
     if (!LittleFS.exists(src))
     {
         shell_println_wrapped("Fichier/dossier introuvable : " + src);
+        return;
+    }
+    if (!fs_can_access(src, 'w')) {
+        shell_println_wrapped("Acces refuse : " + src);
         return;
     }
     if (LittleFS.rename(src, dst))
@@ -426,6 +439,10 @@ void shell_rm(const String &args)
     if (!LittleFS.exists(filename))
     {
         shell_println_wrapped("Fichier ou dossier introuvable : " + filename);
+        return;
+    }
+    if (!fs_can_access(filename, 'w')) {
+        shell_println_wrapped("Acces refuse");
         return;
     }
     File entry = LittleFS.open(filename);

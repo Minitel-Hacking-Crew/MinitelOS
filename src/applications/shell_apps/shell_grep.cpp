@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "applications/shell_apps/shell_extra.h"
 
 void shell_grep(const String &args)
 {
@@ -49,6 +50,10 @@ void shell_grep(const String &args)
     if (!LittleFS.exists(fichier))
     {
         shell_println_wrapped("Fichier introuvable : " + fichier);
+        return;
+    }
+    if (!fs_can_access(fichier, 'r')) {
+        shell_println_wrapped("Acces refuse : " + fichier);
         return;
     }
     File f = LittleFS.open(fichier, "r");
@@ -117,6 +122,10 @@ void shell_head(const String &args)
         shell_println_wrapped("Fichier introuvable : " + fichier);
         return;
     }
+    if (!fs_can_access(fichier, 'r')) {
+        shell_println_wrapped("Acces refuse : " + fichier);
+        return;
+    }
     File f = LittleFS.open(fichier, "r");
     if (!f)
     {
@@ -159,6 +168,10 @@ void shell_tail(const String &args)
     if (!LittleFS.exists(fichier))
     {
         shell_println_wrapped("Fichier introuvable : " + fichier);
+        return;
+    }
+    if (!fs_can_access(fichier, 'r')) {
+        shell_println_wrapped("Acces refuse : " + fichier);
         return;
     }
     File f = LittleFS.open(fichier, "r");

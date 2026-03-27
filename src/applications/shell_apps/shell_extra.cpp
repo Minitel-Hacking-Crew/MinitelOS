@@ -80,6 +80,21 @@ static void write_meta(const String &path, const String &perms,
     }
 }
 
+void set_file_meta(const String &path, const String &perms,
+                   const String &owner, const String &group) {
+    write_meta(path, perms, owner, group);
+}
+
+bool fs_can_access(const String &path, char perm) {
+    if (sessionAccessLevel == "root") return true;
+    FileMeta m = get_file_meta(path);
+    bool isOwner = (m.owner == sessionUsername);
+    int offset = (perm == 'r') ? 0 : (perm == 'w') ? 1 : 2;
+    char ownerBit = ((int)m.perms.length() > offset)     ? m.perms[offset]     : '-';
+    char otherBit = ((int)m.perms.length() > 6 + offset) ? m.perms[6 + offset] : '-';
+    return isOwner ? (ownerBit == perm) : (otherBit == perm);
+}
+
 static String numeric_to_perms(const String &modeStr) {
     // Parse en octal : "644" → 0644 → rw-r--r--
     int mode = (int)strtol(modeStr.c_str(), nullptr, 8);
@@ -97,15 +112,17 @@ static String numeric_to_perms(const String &modeStr) {
 void shell_touch(const String &args) {
     if (args.isEmpty()) { shell_println_wrapped("Usage: touch <fichier>"); return; }
     String path = shell_abspath(args);
-    if (!LittleFS.exists(path)) {
+    bool isNew = !LittleFS.exists(path);
+    if (isNew) {
         File f = LittleFS.open(path, "w");
         if (!f) { shell_println_wrapped("Erreur creation : " + path); return; }
         f.close();
     }
-    // Met à jour les métadonnées (simule l'horodatage de modification)
+    // Nouveau fichier : owner = utilisateur courant ; existant : on conserve l'owner
     FileMeta m = read_meta(path);
-    write_meta(path, m.perms, m.owner.isEmpty() ? sessionUsername : m.owner,
-               m.group.isEmpty() ? sessionUsername : m.group);
+    String owner = isNew ? sessionUsername : m.owner;
+    String group = isNew ? sessionUsername : m.group;
+    write_meta(path, m.perms, owner, group);
 }
 
 // ─── env ─────────────────────────────────────────────────────────────────────
@@ -257,6 +274,10 @@ void shell_chmod(const String &args) {
         perms = mode;  // accepte directement "rw-r--r--"
 
     FileMeta m = read_meta(path);
+    if (sessionAccessLevel != "root" && m.owner != sessionUsername) {
+        shell_println_wrapped("Acces refuse : vous n'etes pas proprietaire");
+        return;
+    }
     write_meta(path, perms, m.owner, m.group);
     shell_println_wrapped(path + " -> " + perms);
 }
@@ -368,6 +389,10 @@ void shell_sudo(const String &args) {
 // ─── chown ───────────────────────────────────────────────────────────────────
 void shell_chown(const String &args) {
     // Usage: chown <user>[:<group>] <path>
+    if (sessionAccessLevel != "root") {
+        shell_println_wrapped("Acces refuse : root uniquement");
+        return;
+    }
     int sp = args.indexOf(' ');
     if (sp < 0) { shell_println_wrapped("Usage: chown <user>[:<group>] <fichier>"); return; }
     String ownership = args.substring(0, sp);

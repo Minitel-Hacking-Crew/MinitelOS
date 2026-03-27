@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "applications/shell_apps/shell_extra.h"
 #include <cmath>
 
 // ─── External globals ─────────────────────────────────────────────────────────
@@ -457,6 +458,9 @@ void shell_run(const String &args) {
     String filename = shell_abspath(args); filename.trim();
     if (!LittleFS.exists(filename)) {
         shell_println_wrapped("Script introuvable : " + filename); return;
+    }
+    if (!fs_can_access(filename, 'r')) {
+        shell_println_wrapped("Acces refuse : " + filename); return;
     }
     File file = LittleFS.open(filename, "r");
     if (!file) {
