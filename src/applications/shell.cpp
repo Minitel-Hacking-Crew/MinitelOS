@@ -49,6 +49,7 @@ ShellCommand commands[] = {
     {"echo", shell_echo},
     {"ssh", shell_sshlauncher},
     {"whoami", shell_whoami_wrapper},
+    {"id",     shell_id},
     {"passwd", shell_passwd_wrapper},
     {"clear", shell_clear_wrapper},
     {"reboot", shell_reboot_wrapper},
@@ -620,8 +621,10 @@ void shell(bool skipInitScreen)
         int spaceIdx = realCmdLine.indexOf(' ');
         String cmd = (spaceIdx == -1) ? realCmdLine : realCmdLine.substring(0, spaceIdx);
         String args = (spaceIdx == -1) ? "" : realCmdLine.substring(spaceIdx + 1);
+        bool callerRedirect = shell_redirect_mode; // préserver le mode cron/parent
         shell_output_buffer = "";
-        shell_redirect_mode = (redirectFile.length() > 0);
+        bool hasFileRedirect = (redirectFile.length() > 0);
+        shell_redirect_mode = hasFileRedirect || callerRedirect;
         bool found = false;
         for (int i = 0; i < numCommands; ++i)
         {
@@ -636,12 +639,12 @@ void shell(bool skipInitScreen)
         {
             shell_println_wrapped("Commande inconnue : " + cmd);
         }
-        if (shell_redirect_mode)
+        if (hasFileRedirect)
         {
             String absRedirectFile = shell_abspath(redirectFile);
             write_to_file(absRedirectFile, shell_output_buffer, appendMode);
-            shell_redirect_mode = false;
         }
+        shell_redirect_mode = callerRedirect; // restaurer le mode parent
     }
 }
 

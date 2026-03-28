@@ -13,6 +13,7 @@ void shell_passwd();
 void shell_set(const String &args);
 void shell_version();
 void shell_whoami();
+void shell_id(const String &);
 void shell_wait(const String &args);
 void shell_pwd(const String &);
 void shell_help(const String &);

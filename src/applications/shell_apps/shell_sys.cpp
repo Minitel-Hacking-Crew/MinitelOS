@@ -307,51 +307,81 @@ void shell_help(const String &)
     shell_println_wrapped("Commandes disponibles :");
 
     shell_println_wrapped("\n--- SYSTEME ---");
-    shell_println_wrapped("  reboot           - Redémarre le système");
-    shell_println_wrapped("  logout           - Déconnexion");
-    shell_println_wrapped("  clear            - Efface l'écran");
-    shell_println_wrapped("  version          - Affiche la version du système");
+    shell_println_wrapped("  reboot           - Redemarre le systeme");
+    shell_println_wrapped("  logout / exit    - Deconnexion");
+    shell_println_wrapped("  clear            - Efface l'ecran");
+    shell_println_wrapped("  version          - Affiche la version du systeme");
     shell_println_wrapped("  whoami           - Affiche l'utilisateur actuel");
+    shell_println_wrapped("  id               - Affiche user et niveau de privilege");
     shell_println_wrapped("  passwd           - Change le mot de passe");
-    shell_println_wrapped("  set <var> <val>  - Définit une variable d'environnement");
-    shell_println_wrapped("  echo <texte>     - Affiche le texte ou la valeur d'une variable");
-    shell_println_wrapped("  wait <ms>        - Attend un certain nombre de millisecondes");
+    shell_println_wrapped("  su <user>        - Change d'utilisateur");
+    shell_println_wrapped("  sudo <cmd>       - Execute une commande en root");
+    shell_println_wrapped("  sudoedit <fich>  - Edite un fichier en root");
+    shell_println_wrapped("  adduser          - Ajoute un utilisateur (root)");
+    shell_println_wrapped("  deluser          - Supprime un utilisateur (root)");
+    shell_println_wrapped("  date             - Affiche la date et l'heure");
+    shell_println_wrapped("  uptime           - Affiche le temps de fonctionnement");
+    shell_println_wrapped("  free             - Affiche la memoire disponible");
+    shell_println_wrapped("  ps               - Liste les processus");
+    shell_println_wrapped("  kill <pid>       - Termine un processus");
+    shell_println_wrapped("  motd             - Affiche/modifie le message du jour");
     shell_println_wrapped("  history          - Affiche l'historique des commandes");
     shell_println_wrapped("  clearh           - Efface l'historique des commandes");
-    shell_println_wrapped("  motd             - Affiche ou modifie le message du jour (MOTD)");
-    shell_println_wrapped("  su <user>        - Change d'utilisateur après vérification du mot de passe");
-    shell_println_wrapped("  adduser          - Ajoute un nouvel utilisateur (root uniquement)");
-    shell_println_wrapped("  deluser          - Supprime un utilisateur (root uniquement)");
-    shell_println_wrapped("  cronpause        - Met en pause les tâches cron");
-    shell_println_wrapped("  cronresume       - Reprend les tâches cron");
+
+    shell_println_wrapped("\n--- VARIABLES & SCRIPTING ---");
+    shell_println_wrapped("  set <var> <val>  - Definit une variable");
+    shell_println_wrapped("  export <var>     - Exporte une variable");
+    shell_println_wrapped("  env              - Affiche les variables d'environnement");
+    shell_println_wrapped("  echo <texte>     - Affiche du texte ou une variable");
+    shell_println_wrapped("  wait <ms>        - Attend N millisecondes");
+    shell_println_wrapped("  sleep <s>        - Attend N secondes");
+    shell_println_wrapped("  run <fichier>    - Execute un script .msh");
 
     shell_println_wrapped("\n--- NAVIGATION & FICHIERS ---");
-    shell_println_wrapped("  pwd              - Affiche le répertoire courant");
-    shell_println_wrapped("  cd <répertoire>  - Change de répertoire");
-    shell_println_wrapped("  ls               - Liste les fichiers du répertoire courant");
-    shell_println_wrapped("  mkdir <nom>      - Crée un nouveau dossier");
+    shell_println_wrapped("  pwd              - Affiche le repertoire courant");
+    shell_println_wrapped("  cd <rep>         - Change de repertoire");
+    shell_println_wrapped("  ls [-la]         - Liste les fichiers");
+    shell_println_wrapped("  mkdir <nom>      - Cree un dossier");
     shell_println_wrapped("  rm <fichier>     - Supprime un fichier ou dossier");
     shell_println_wrapped("  cp <src> <dst>   - Copie un fichier");
-    shell_println_wrapped("  mv <src> <dst>   - Renomme ou déplace un fichier");
+    shell_println_wrapped("  mv <src> <dst>   - Deplace ou renomme un fichier");
     shell_println_wrapped("  cat <fichier>    - Affiche le contenu d'un fichier");
-    shell_println_wrapped("  create <nom>     - Crée un fichier vide");
+    shell_println_wrapped("  head <fich>      - Affiche les premieres lignes");
+    shell_println_wrapped("  tail <fich>      - Affiche les dernieres lignes");
+    shell_println_wrapped("  grep <p> <fich>  - Recherche un motif dans un fichier");
+    shell_println_wrapped("  touch <fichier>  - Cree un fichier vide");
+    shell_println_wrapped("  create <nom>     - Cree un fichier vide");
+    shell_println_wrapped("  edit <fichier>   - Ouvre l'editeur de texte");
     shell_println_wrapped("  df               - Affiche l'espace disque");
-    shell_println_wrapped("  edit <fichier>   - Ouvre un fichier dans l'éditeur de texte");
-    shell_println_wrapped("  run <fichier>    - Exécute un script");
+    shell_println_wrapped("  du [rep]         - Taille d'un repertoire");
+    shell_println_wrapped("  chmod <mode> <f> - Change les permissions");
+    shell_println_wrapped("  chown <usr> <f>  - Change le proprietaire");
 
-    shell_println_wrapped("\n--- RÉSEAU ---");
-    shell_println_wrapped("  ifconfig         - Affiche les informations réseau");
-    shell_println_wrapped("  ping <host>      - Ping un hôte");
-    shell_println_wrapped("  ping -t <x> <host> - Ping un hôte avec un nombre de requêtes spécifié");
-    shell_println_wrapped("  curl <url>       - Effectue une requête HTTP GET ou POST");
-    shell_println_wrapped("  curl -d 'data' <url> - Effectue une requête HTTP POST avec des données");
-    shell_println_wrapped("  ssh <user@host>  - Lance un client SSH sur le port par défaut (22)");
+    shell_println_wrapped("\n--- GROUPES ---");
+    shell_println_wrapped("  groups [user]    - Groupes d'un utilisateur");
+    shell_println_wrapped("  groupadd <nom>   - Cree un groupe (root)");
+    shell_println_wrapped("  groupdel <nom>   - Supprime un groupe (root)");
+    shell_println_wrapped("  groupmem [-d] <groupe> <user> - Gere les membres");
+
+    shell_println_wrapped("\n--- CRON ---");
+    shell_println_wrapped("  crontab [-l|-e|-r] - Gere les taches planifiees");
+    shell_println_wrapped("  cronpause        - Met en pause le cron");
+    shell_println_wrapped("  cronresume       - Reprend le cron");
+
+    shell_println_wrapped("\n--- RESEAU ---");
+    shell_println_wrapped("  ifconfig         - Informations reseau");
+    shell_println_wrapped("  wifi             - Configure le WiFi");
+    shell_println_wrapped("  ping [-t x] <h>  - Ping un hote");
+    shell_println_wrapped("  nslookup <host>  - Resolveur DNS");
+    shell_println_wrapped("  curl <url>       - Requete HTTP GET");
+    shell_println_wrapped("  curl -d 'd' <u>  - Requete HTTP POST");
+    shell_println_wrapped("  ssh user@host    - Client SSH");
 
     shell_println_wrapped("\n--- DIVERS ---");
     shell_println_wrapped("  help             - Affiche cette aide");
-    shell_println_wrapped("  saisirTexte      - Saisie de texte avancée (utilisée dans l'éditeur)");
-    shell_println_wrapped("  (Touche REPETITION) - Active/désactive le déplacement gauche/droite dans la saisie texte");
-    shell_println_wrapped("  (Touche GUIDE x6)   - Réinitialise les utilisateurs au démarrage");
+    shell_println_wrapped("  ctftime          - Affiche le temps restant CTF");
+    shell_println_wrapped("  (Touche REPETITION) - Mode deplacement texte");
+    shell_println_wrapped("  (Touche GUIDE x6)   - Reset utilisateurs");
     minitel.println();
 }
 
@@ -498,6 +528,11 @@ void shell_motd()
 void shell_whoami()
 {
     shell_println_wrapped(sessionUsername);
+}
+
+void shell_id(const String &)
+{
+    shell_println_wrapped("user=" + sessionUsername + "  niveau=" + sessionAccessLevel);
 }
 
 void shell_su(const String &args)
